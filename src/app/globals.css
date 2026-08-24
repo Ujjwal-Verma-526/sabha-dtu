@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #faf9f4;
+  --ink: #15161a;
+  --ink-soft: #52535c;
+  --primary: #6c3bf5;
+  --primary-dark: #4d22c4;
+  --accent: #c9f031;
+  --line: #e5e2d8;
+  --surface: #ffffff;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-accent: var(--accent);
+  --color-line: var(--line);
+  --color-surface: var(--surface);
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* perforated ticket-stub divider, used sparingly as the signature motif */
+.ticket-perf {
+  background-image: radial-gradient(circle, var(--line) 1.5px, transparent 1.5px);
+  background-size: 10px 10px;
+  background-repeat: repeat-x;
+  background-position: center;
+  height: 2px;
+}
