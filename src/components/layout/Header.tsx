@@ -18,6 +18,18 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
+          <Link
+            href="/clubs"
+            className="text-sm font-medium text-ink-soft transition-colors hover:text-ink"
+          >
+            Clubs
+          </Link>
+          <Link
+            href="/events"
+            className="text-sm font-medium text-ink-soft transition-colors hover:text-ink"
+          >
+            Events
+          </Link>
           {navLinks.map((link) => (
             <a
               key={link.href}
