@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ButtonLink } from "@/components/ui/Button";
 
 const navLinks = [
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#for-societies", label: "For societies" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#for-societies", label: "For societies" },
 ];
 
 export function Header() {
@@ -31,13 +31,13 @@ export function Header() {
             Events
           </Link>
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               className="text-sm font-medium text-ink-soft transition-colors hover:text-ink"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
