@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
-import { RegisterCTA } from "@/components/events/RegisterCTA";
+import { RegisterCTA, type RegisterCTAState } from "@/components/events/RegisterCTA";
+import { registerForEvent } from "./actions";
 
 async function getEvent(slug: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("events")
     .select(
-      "title, slug, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status, club:clubs(name, slug, verified)",
+      "id, title, slug, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status, club:clubs(name, slug, verified)",
     )
     .eq("slug", slug)
     .eq("status", "published")
@@ -17,6 +18,7 @@ async function getEvent(slug: string) {
 
   return data as unknown as
     | {
+        id: string;
         title: string;
         slug: string;
         description: string | null;
@@ -30,6 +32,59 @@ async function getEvent(slug: string) {
         club: { name: string; slug: string; verified: boolean } | null;
       }
     | null;
+}
+
+// Computes the CTA's initial render state server-side so the page never
+// flashes "Register" before flipping to "Registered"/"Full"/etc. Only
+// "closed" (deadline passed) and "full" (capacity reached) are reachable
+// this way — getEvent only ever returns published events, so "cancelled"
+// isn't reachable from a page load; RegisterCTA still supports it for the
+// rare race where an event is cancelled between page load and the click.
+async function getInitialCTAState(event: {
+  id: string;
+  registration_deadline: string | null;
+  capacity: number | null;
+}): Promise<{ state: RegisterCTAState; ticketCode: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: existing } = await supabase
+      .from("event_registrations")
+      .select("ticket_code")
+      .eq("event_id", event.id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existing) {
+      return { state: "registered", ticketCode: existing.ticket_code };
+    }
+  }
+
+  if (
+    event.registration_deadline &&
+    new Date() > new Date(event.registration_deadline)
+  ) {
+    return { state: "closed", ticketCode: null };
+  }
+
+  if (event.capacity != null) {
+    const { data: count } = await supabase.rpc(
+      "get_event_registration_count",
+      { target_event: event.id },
+    );
+    if (count != null && count >= event.capacity) {
+      return { state: "full", ticketCode: null };
+    }
+  }
+
+  if (!user) {
+    return { state: "login_required", ticketCode: null };
+  }
+
+  return { state: "idle", ticketCode: null };
 }
 
 export async function generateMetadata({
@@ -76,6 +131,8 @@ export default async function EventPage({
   const event = await getEvent(slug);
 
   if (!event) notFound();
+
+  const { state: ctaState, ticketCode } = await getInitialCTAState(event);
 
   const start = new Date(event.start_at);
   const end = new Date(event.end_at);
@@ -158,7 +215,11 @@ export default async function EventPage({
       )}
 
       <div className="mt-8">
-        <RegisterCTA />
+        <RegisterCTA
+          initialState={ctaState}
+          initialTicketCode={ticketCode}
+          registerAction={registerForEvent.bind(null, event.id, event.slug)}
+        />
       </div>
     </main>
   );

@@ -175,6 +175,10 @@ export interface Database {
           joined_at: string;
         }[];
       };
+      get_event_registration_count: {
+        Args: { target_event: string };
+        Returns: number;
+      };
     };
   };
 }
