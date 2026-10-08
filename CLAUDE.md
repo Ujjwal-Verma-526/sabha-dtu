@@ -16,11 +16,21 @@ Sabha is a DTU-first society/event management web app.
 
 ## Database & migrations
 
-- Migrations `20260825000001` through `20260827000001` are applied to the live Supabase project. Treat them as applied; never recreate or modify them.
-- `20260828000001_event_registration_guards.sql` (registration deadline/capacity trigger + `get_event_registration_count` RPC) is in PR #1. Live status is unconfirmed: the Supabase host failed DNS on 2026-10-07, so the project may be paused. Check the dashboard before assuming it is applied.
-- New database changes require new migration files. Never run `supabase db push` or apply SQL to the live project without the user's explicit go-ahead.
+- **The live project has no CLI migration history.** Migrations are applied by hand in the Supabase SQL editor, and `supabase_migrations.schema_migrations` does not exist on live. Never assume CLI history and never suggest `supabase db push` against live. To ship a migration, hand the user one SQL file to paste plus a verification query; never apply anything to live yourself.
+- Applied on live: `20260825000001` through `20260828000001` (the user applied the registration guards migration by hand on 2026-10-08). Treat them as applied; never recreate or modify them.
+- `20260829000001_registration_tickets.sql` (QR ticket tokens) is in the `feat/qr-tickets` PR and must be applied to live by the user.
+- pgcrypto lives in the `extensions` schema on live and locally: call `extensions.gen_random_bytes`, never the unqualified name.
+- New database changes require new migration files.
 - RLS/security is critical. Never weaken existing policies merely to make frontend functionality work.
 - Registration rules that RLS can't express (deadline, capacity) live in a `BEFORE INSERT` trigger. The server action's checks are only for friendly UI states; the DB is the authority.
+- QR ticket tokens live in `registration_tickets`, readable only by the registrant (not club managers, not super-admins). No API role can insert/update/delete them; the `issue_registration_ticket` trigger creates them. Tokens and `ticket_code` are immutable (BEFORE UPDATE triggers). `ticket_code` is a short, non-secret, manager-visible reference; the door check-in must accept only the token, via a SECURITY DEFINER RPC.
+
+## Local Supabase (testing only)
+
+- `supabase/config.toml` is for a local, **unlinked** stack. Never `supabase link` to the live project.
+- `npx supabase start` applies every migration plus `seed.sql` to a throwaway local DB in Docker.
+- `supabase/tests/registration_tickets_roles.sql` is a rolled-back role test for the ticket migration; run it with `docker exec -i supabase_db_sabha psql -U postgres -d postgres < supabase/tests/registration_tickets_roles.sql`.
+- `src/lib/supabase/types.ts` is hand-maintained. Check changes against `npx supabase gen types typescript --local`, but keep the file's existing style (the generator types every RPC result column as non-null).
 
 ## Working style
 
@@ -31,7 +41,7 @@ Sabha is a DTU-first society/event management web app.
 - No `Co-Authored-By: Claude` trailer on commits.
 - If the project state is ambiguous, inspect the repository, migrations, git history, and existing code rather than guessing.
 
-## Current Project State (as of 2026-10-07)
+## Current Project State (as of 2026-10-08)
 
 **Completed (on `main`):**
 - Authentication (Supabase Auth) and user profiles
@@ -39,13 +49,15 @@ Sabha is a DTU-first society/event management web app.
 - Super-admin club management
 - Club-admin event create/edit/cancel, with banner upload (Supabase Storage)
 - Public event discovery (`/events`) and event detail pages (`/events/[slug]`)
+- Event registration (RSVP): DB trigger enforcing published status, deadline and capacity (row-locked), aggregate-only count RPC, `registerForEvent` server action, `RegisterCTA`
 
-**In review (PR #1, branch `feat/registration-guards`):**
-- Event registration: DB trigger enforcing published status, deadline and capacity (row-locked), aggregate-only count RPC, `registerForEvent` server action, `RegisterCTA`. Lint, typecheck and build pass.
+**In review (branch `feat/qr-tickets`):**
+- QR tickets: `registration_tickets` table + migration, "My tickets" page at `/tickets` (server-rendered SVG QR via `qrcode`, encoding only the token), links from the header, `/profile` and the post-registration CTA.
+
+**The deferral on RSVP/registration and QR tickets is lifted** (user's explicit instruction, 2026-10-08).
 
 **Next to build (only when instructed):**
-- QR ticket display ("my tickets"; each registration already has a unique `ticket_code`)
-- Admin door scanner that sets `checked_in_at` (only club managers/super-admins may update registrations)
+- Admin door scanner / check-in: a SECURITY DEFINER RPC that takes a token and sets `checked_in_at` for a manager of that event's club. Managers never read tokens directly.
 
 **Explicitly deferred (do not build until instructed):**
 - Payments
