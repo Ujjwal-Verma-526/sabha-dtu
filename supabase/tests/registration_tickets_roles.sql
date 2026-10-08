@@ -1,5 +1,11 @@
 -- Role tests for 20260829000001_registration_tickets.sql.
 -- Runs entirely inside one transaction and ends in ROLLBACK: nothing persists.
+-- LOCAL STACK ONLY. Never run against the live project.
+--
+--   npx supabase start
+--   docker exec -i supabase_db_sabha psql -U postgres -d postgres < supabase/tests/registration_tickets_roles.sql
+--
+-- Every row of the final report should say PASS.
 --
 -- Actors:  A = student, B = other student, M = club manager (admin of the
 --          event's club), S = super_admin.
