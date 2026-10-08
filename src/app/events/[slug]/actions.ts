@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type RegisterResult =
-  | { ok: true; ticketCode: string; alreadyRegistered: boolean }
+  | {
+      ok: true;
+      ticketCode: string;
+      // Used to link to /tickets#ticket-<id>. The QR token itself is never
+      // sent to the client from here; /tickets reads it server-side.
+      registrationId: string;
+      alreadyRegistered: boolean;
+    }
   | {
       ok: false;
       reason:
@@ -51,7 +58,7 @@ export async function registerForEvent(
   // being handed their existing ticket.
   const { data: existingRegistration } = await supabase
     .from("event_registrations")
-    .select("ticket_code")
+    .select("id, ticket_code")
     .eq("event_id", eventId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -60,6 +67,7 @@ export async function registerForEvent(
     return {
       ok: true,
       ticketCode: existingRegistration.ticket_code,
+      registrationId: existingRegistration.id,
       alreadyRegistered: true,
     };
   }
@@ -118,7 +126,7 @@ export async function registerForEvent(
   const { data: inserted, error } = await supabase
     .from("event_registrations")
     .insert({ event_id: eventId, user_id: user.id })
-    .select("ticket_code")
+    .select("id, ticket_code")
     .single();
 
   if (error) {
@@ -129,13 +137,18 @@ export async function registerForEvent(
       // rather than surfacing a confusing "already registered" error.
       const { data: existing } = await supabase
         .from("event_registrations")
-        .select("ticket_code")
+        .select("id, ticket_code")
         .eq("event_id", eventId)
         .eq("user_id", user.id)
         .single();
 
       if (existing) {
-        return { ok: true, ticketCode: existing.ticket_code, alreadyRegistered: true };
+        return {
+          ok: true,
+          ticketCode: existing.ticket_code,
+          registrationId: existing.id,
+          alreadyRegistered: true,
+        };
       }
     }
 
@@ -166,5 +179,11 @@ export async function registerForEvent(
 
   revalidatePath(`/events`);
   revalidatePath(`/events/${slug}`);
-  return { ok: true, ticketCode: inserted.ticket_code, alreadyRegistered: false };
+  revalidatePath("/tickets");
+  return {
+    ok: true,
+    ticketCode: inserted.ticket_code,
+    registrationId: inserted.id,
+    alreadyRegistered: false,
+  };
 }

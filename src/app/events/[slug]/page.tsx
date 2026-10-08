@@ -44,7 +44,11 @@ async function getInitialCTAState(event: {
   id: string;
   registration_deadline: string | null;
   capacity: number | null;
-}): Promise<{ state: RegisterCTAState; ticketCode: string | null }> {
+}): Promise<{
+  state: RegisterCTAState;
+  ticketCode: string | null;
+  registrationId: string | null;
+}> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -53,13 +57,17 @@ async function getInitialCTAState(event: {
   if (user) {
     const { data: existing } = await supabase
       .from("event_registrations")
-      .select("ticket_code")
+      .select("id, ticket_code")
       .eq("event_id", event.id)
       .eq("user_id", user.id)
       .maybeSingle();
 
     if (existing) {
-      return { state: "registered", ticketCode: existing.ticket_code };
+      return {
+        state: "registered",
+        ticketCode: existing.ticket_code,
+        registrationId: existing.id,
+      };
     }
   }
 
@@ -67,7 +75,7 @@ async function getInitialCTAState(event: {
     event.registration_deadline &&
     new Date() > new Date(event.registration_deadline)
   ) {
-    return { state: "closed", ticketCode: null };
+    return { state: "closed", ticketCode: null, registrationId: null };
   }
 
   if (event.capacity != null) {
@@ -76,15 +84,15 @@ async function getInitialCTAState(event: {
       { target_event: event.id },
     );
     if (count != null && count >= event.capacity) {
-      return { state: "full", ticketCode: null };
+      return { state: "full", ticketCode: null, registrationId: null };
     }
   }
 
   if (!user) {
-    return { state: "login_required", ticketCode: null };
+    return { state: "login_required", ticketCode: null, registrationId: null };
   }
 
-  return { state: "idle", ticketCode: null };
+  return { state: "idle", ticketCode: null, registrationId: null };
 }
 
 export async function generateMetadata({
@@ -132,7 +140,11 @@ export default async function EventPage({
 
   if (!event) notFound();
 
-  const { state: ctaState, ticketCode } = await getInitialCTAState(event);
+  const {
+    state: ctaState,
+    ticketCode,
+    registrationId,
+  } = await getInitialCTAState(event);
 
   const start = new Date(event.start_at);
   const end = new Date(event.end_at);
@@ -218,6 +230,7 @@ export default async function EventPage({
         <RegisterCTA
           initialState={ctaState}
           initialTicketCode={ticketCode}
+          initialRegistrationId={registrationId}
           registerAction={registerForEvent.bind(null, event.id, event.slug)}
         />
       </div>

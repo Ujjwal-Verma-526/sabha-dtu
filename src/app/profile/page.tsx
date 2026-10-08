@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { updateProfile, signOut } from "./actions";
 
 export default async function ProfilePage() {
@@ -46,6 +46,18 @@ export default async function ProfilePage() {
           </Button>
         </form>
       </div>
+
+      <Card className="mt-6 flex items-center justify-between gap-4">
+        <div>
+          <p className="font-display font-semibold text-ink">My tickets</p>
+          <p className="text-sm text-ink-soft">
+            QR tickets for events you&apos;ve registered for.
+          </p>
+        </div>
+        <ButtonLink href="/tickets" variant="accent" className="shrink-0">
+          View tickets
+        </ButtonLink>
+      </Card>
 
       <Card className="mt-6">
         <p className="text-sm text-ink-soft">

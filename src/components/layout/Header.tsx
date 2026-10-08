@@ -41,9 +41,19 @@ export function Header() {
           ))}
         </nav>
 
-        <ButtonLink href="/login" variant="primary" className="text-sm">
-          Sign in
-        </ButtonLink>
+        <div className="flex items-center gap-4 sm:gap-6">
+          {/* Visible at every width (unlike the nav above): tickets are
+              mostly opened on a phone at the entrance. */}
+          <Link
+            href="/tickets"
+            className="text-sm font-medium text-ink-soft transition-colors hover:text-ink"
+          >
+            My tickets
+          </Link>
+          <ButtonLink href="/login" variant="primary" className="text-sm">
+            Sign in
+          </ButtonLink>
+        </div>
       </div>
     </header>
   );
