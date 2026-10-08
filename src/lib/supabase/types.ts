@@ -160,6 +160,20 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      // One secret QR token per registration. Readable only by the
+      // registrant (RLS); anon/authenticated have no INSERT/UPDATE/DELETE
+      // privilege — rows come from the issue_registration_ticket trigger.
+      // See supabase/migrations/20260829000001_registration_tickets.sql.
+      registration_tickets: {
+        Row: {
+          registration_id: string;
+          token: string;
+          created_at: string;
+        };
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -178,6 +192,26 @@ export interface Database {
       get_event_registration_count: {
         Args: { target_event: string };
         Returns: number;
+      };
+      // The caller's own registrations with event details. Never includes
+      // the ticket token — read that from registration_tickets.
+      get_my_registrations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          registration_id: string;
+          ticket_code: string;
+          checked_in_at: string | null;
+          registered_at: string;
+          event_id: string;
+          event_title: string;
+          event_slug: string;
+          event_venue: string | null;
+          event_start_at: string;
+          event_end_at: string;
+          event_status: EventStatus;
+          club_name: string;
+          club_slug: string;
+        }[];
       };
     };
   };
