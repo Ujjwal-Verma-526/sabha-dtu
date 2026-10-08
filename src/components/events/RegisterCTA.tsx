@@ -17,15 +17,20 @@ export type RegisterCTAState =
 export function RegisterCTA({
   initialState,
   initialTicketCode = null,
+  initialRegistrationId = null,
   registerAction,
 }: {
   initialState: RegisterCTAState;
   initialTicketCode?: string | null;
+  initialRegistrationId?: string | null;
   registerAction: () => Promise<RegisterResult>;
 }) {
   const [state, setState] = useState<RegisterCTAState>(initialState);
   const [ticketCode, setTicketCode] = useState<string | null>(
     initialTicketCode,
+  );
+  const [registrationId, setRegistrationId] = useState<string | null>(
+    initialRegistrationId,
   );
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +45,7 @@ export function RegisterCTA({
 
       if (result.ok) {
         setTicketCode(result.ticketCode);
+        setRegistrationId(result.registrationId);
         setState("registered");
         return;
       }
@@ -100,6 +106,13 @@ export function RegisterCTA({
             Ticket {ticketCode}
           </p>
         )}
+        <ButtonLink
+          href={registrationId ? `/tickets#ticket-${registrationId}` : "/tickets"}
+          variant="accent"
+          className="mt-4 w-full sm:w-auto"
+        >
+          View your ticket →
+        </ButtonLink>
       </div>
     );
   }
