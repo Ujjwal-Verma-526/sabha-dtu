@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 import type { TicketState } from "@/lib/tickets";
 
@@ -35,6 +34,12 @@ const stateLabel: Record<TicketState, string> = {
   ended: "Event ended",
   cancelled: "Cancelled",
 };
+
+// Same base as Badge, but with the colours supplied here instead of
+// overriding Badge's own: there's no tailwind-merge, so a conflicting
+// bg-/border-/text- class on Badge wins or loses by CSS order, not intent.
+const pillBase =
+  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-xs uppercase tracking-wide";
 
 const stateBadgeClass: Record<TicketState, string> = {
   active: "border-accent bg-accent text-ink",
@@ -74,7 +79,9 @@ export function TicketStub({
     >
       <div className="flex items-center justify-between gap-3">
         <span className="font-display text-lg font-bold text-ink">Sabha</span>
-        <Badge className={stateBadgeClass[state]}>{stateLabel[state]}</Badge>
+        <span className={cn(pillBase, stateBadgeClass[state])}>
+          {stateLabel[state]}
+        </span>
       </div>
 
       <p className="mt-4 font-mono text-xs uppercase tracking-wide text-ink-soft">
@@ -116,9 +123,11 @@ export function TicketStub({
             {ticket.ticketCode}
           </p>
           {ticket.checkedInAt ? (
-            <Badge className="mt-3 border-primary/30 bg-primary/10 text-primary">
+            <span
+              className={cn(pillBase, "mt-3 border-primary/30 bg-primary/10 text-primary")}
+            >
               Checked in
-            </Badge>
+            </span>
           ) : (
             <p className="mt-3 text-center text-xs text-ink-soft">
               Show this QR at the entrance.
