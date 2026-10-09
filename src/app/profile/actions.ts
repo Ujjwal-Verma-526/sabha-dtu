@@ -44,6 +44,12 @@ export async function updateProfile(formData: FormData) {
 
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    throw new Error(`Could not sign out: ${error.message}`);
+  }
+  // The header lives in the root layout; drop every cached render so no page
+  // keeps showing the signed-in state.
+  revalidatePath("/", "layout");
   redirect("/");
 }

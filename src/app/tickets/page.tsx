@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { TicketStub } from "@/components/tickets/TicketStub";
+import { loginPathFor } from "@/lib/auth-redirect";
 import { renderTicketQrSvg } from "@/lib/qr";
 import { getTicketState, type TicketState } from "@/lib/tickets";
 
@@ -21,7 +22,7 @@ export default async function TicketsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(loginPathFor("/tickets"));
   }
 
   // Event details come from get_my_registrations() (security definer,
