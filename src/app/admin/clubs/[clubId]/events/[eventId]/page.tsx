@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { Button } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { BannerUpload } from "@/components/events/BannerUpload";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
 import { CancelEventButton } from "@/components/events/CancelEventButton";
@@ -94,9 +94,13 @@ export default async function EditEventPage({
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {event.status === "draft" && (
           <form action={publish}>
-            <Button type="submit" variant="primary" className="text-sm">
+            <SubmitButton
+              variant="primary"
+              className="text-sm"
+              pendingLabel="Publishing…"
+            >
               Publish
-            </Button>
+            </SubmitButton>
           </form>
         )}
         {(event.status === "draft" || event.status === "published") && (
@@ -197,9 +201,9 @@ export default async function EditEventPage({
             />
           </label>
 
-          <Button type="submit" variant="primary" className="mt-2">
+          <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
             Save changes
-          </Button>
+          </SubmitButton>
         </form>
       </Card>
     </main>

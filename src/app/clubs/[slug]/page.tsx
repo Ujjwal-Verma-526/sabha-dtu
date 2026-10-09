@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ClubLogo } from "@/components/clubs/ClubLogo";
 import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { ButtonLink } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Card } from "@/components/ui/Card";
 import { requestToJoin } from "./actions";
 
@@ -183,9 +184,9 @@ function MembershipAction({
 
   return (
     <form action={joinWithArgs}>
-      <Button type="submit" variant="primary" className="text-sm">
+      <SubmitButton variant="primary" className="text-sm" pendingLabel="Sending…">
         {status === "rejected" ? "Request again" : "Request to join"}
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

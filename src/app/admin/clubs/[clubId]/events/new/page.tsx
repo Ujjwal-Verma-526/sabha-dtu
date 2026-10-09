@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { Button } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { BannerUpload } from "@/components/events/BannerUpload";
 import { createEvent } from "../actions";
 
@@ -125,9 +125,9 @@ export default async function NewEventPage({
             <Input name="capacity" type="number" min={1} placeholder="200" />
           </label>
 
-          <Button type="submit" variant="primary" className="mt-2">
+          <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
             Save draft
-          </Button>
+          </SubmitButton>
         </form>
       </Card>
     </main>

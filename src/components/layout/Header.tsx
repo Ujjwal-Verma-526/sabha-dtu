@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/profile/actions";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { ButtonLink } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { createClient } from "@/lib/supabase/server";
 
 const navLinks = [
@@ -69,9 +70,9 @@ export async function Header() {
                 Profile
               </Link>
               <form action={signOut}>
-                <Button type="submit" variant="ghost" className="text-sm">
+                <SubmitButton variant="ghost" className="text-sm">
                   Sign out
-                </Button>
+                </SubmitButton>
               </form>
             </>
           ) : (
