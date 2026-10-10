@@ -2,11 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
-type Club = { id: string; name: string };
+export type MenuItem = { href: string; label: string };
 
-/** "Manage" dropdown for people who manage several clubs. */
-export function ManageMenu({ clubs }: { clubs: Club[] }) {
+type DropdownMenuProps = {
+  label: string;
+  items: MenuItem[];
+  /** Extra classes for the wrapper (e.g. to hide it at some widths). */
+  className?: string;
+};
+
+/**
+ * Small header dropdown. On narrow screens the panel is pinned to the
+ * viewport edges (so long labels truncate instead of overflowing); from `sm`
+ * up it hangs off the button.
+ */
+export function DropdownMenu({ label, items, className }: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -27,7 +39,7 @@ export function ManageMenu({ clubs }: { clubs: Club[] }) {
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={cn("relative", className)}>
       <button
         type="button"
         aria-expanded={open}
@@ -35,18 +47,18 @@ export function ManageMenu({ clubs }: { clubs: Club[] }) {
         onClick={() => setOpen((value) => !value)}
         className="text-[13px] font-medium text-ink-soft transition-colors hover:text-ink sm:text-sm"
       >
-        Manage <span aria-hidden="true" className="text-[10px]">▾</span>
+        {label} <span aria-hidden="true" className="text-[10px]">▾</span>
       </button>
       {open && (
         <ul className="fixed inset-x-4 top-[4.25rem] z-50 rounded-2xl border border-line bg-surface p-2 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-3 sm:w-56">
-          {clubs.map((club) => (
-            <li key={club.id}>
+          {items.map((item) => (
+            <li key={`${item.href}-${item.label}`}>
               <Link
-                href={`/admin/clubs/${club.id}`}
+                href={item.href}
                 onClick={() => setOpen(false)}
                 className="block truncate rounded-xl px-3 py-2 text-sm text-ink hover:bg-ink/5"
               >
-                {club.name}
+                {item.label}
               </Link>
             </li>
           ))}

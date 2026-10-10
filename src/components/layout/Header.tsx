@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signOut } from "@/app/profile/actions";
 import { ButtonLink } from "@/components/ui/Button";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { ManageMenu } from "@/components/layout/ManageMenu";
+import { DropdownMenu } from "@/components/layout/DropdownMenu";
 import { getViewerRoles } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,6 +26,22 @@ export async function Header() {
     ? await getViewerRoles(supabase, userId)
     : { isSuperAdmin: false, managedClubs: [] };
   const [singleClub, ...otherClubs] = roles.managedClubs;
+
+  const navLinkClass =
+    "text-[13px] font-medium text-ink-soft transition-colors hover:text-ink sm:text-sm";
+  const adminLinkClass =
+    "text-[13px] font-medium text-primary transition-colors hover:text-primary-dark sm:text-sm";
+
+  const compactItems = [
+    { href: "/tickets", label: "My tickets" },
+    ...(roles.isSuperAdmin
+      ? [{ href: "/admin/clubs", label: "Admin" }]
+      : roles.managedClubs.map((club) => ({
+          href: `/admin/clubs/${club.id}`,
+          label: `Manage: ${club.name}`,
+        }))),
+    { href: "/profile", label: "Profile" },
+  ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
@@ -61,51 +77,64 @@ export async function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-1.5 whitespace-nowrap sm:gap-6">
-          {/* Visible at every width (unlike the nav above): tickets are
-              mostly opened on a phone at the entrance. */}
-          <Link
-            href="/tickets"
-            className="text-[13px] font-medium sm:text-sm text-ink-soft transition-colors hover:text-ink"
-          >
-            <span className="sm:hidden">Tickets</span>
-            <span className="hidden sm:inline">My tickets</span>
-          </Link>
-          {roles.isSuperAdmin ? (
-            <Link
-              href="/admin/clubs"
-              className="text-[13px] font-medium sm:text-sm text-primary transition-colors hover:text-primary-dark"
-            >
-              Admin
-            </Link>
-          ) : singleClub && otherClubs.length === 0 ? (
-            <Link
-              href={`/admin/clubs/${singleClub.id}`}
-              className="text-[13px] font-medium sm:text-sm text-primary transition-colors hover:text-primary-dark"
-            >
-              Manage
-            </Link>
-          ) : singleClub ? (
-            <ManageMenu clubs={roles.managedClubs} />
-          ) : null}
+        <div className="flex items-center gap-2 whitespace-nowrap sm:gap-6">
           {isSignedIn ? (
             <>
-              <Link
-                href="/profile"
-                className="text-[13px] font-medium sm:text-sm text-ink-soft transition-colors hover:text-ink"
-              >
-                Profile
-              </Link>
+              {/* Below 400px the links collapse into one menu so the header
+                  can't overflow however long the labels get. */}
+              <DropdownMenu
+                label="Menu"
+                items={compactItems}
+                className="min-[400px]:hidden"
+              />
+              <div className="hidden items-center gap-3 min-[400px]:flex sm:gap-6">
+                <Link href="/tickets" className={navLinkClass}>
+                  My tickets
+                </Link>
+                {roles.isSuperAdmin ? (
+                  <Link href="/admin/clubs" className={adminLinkClass}>
+                    Admin
+                  </Link>
+                ) : singleClub && otherClubs.length === 0 ? (
+                  <Link
+                    href={`/admin/clubs/${singleClub.id}`}
+                    className={adminLinkClass}
+                  >
+                    Manage
+                  </Link>
+                ) : singleClub ? (
+                  <DropdownMenu
+                    label="Manage"
+                    items={roles.managedClubs.map((club) => ({
+                      href: `/admin/clubs/${club.id}`,
+                      label: club.name,
+                    }))}
+                  />
+                ) : null}
+                <Link href="/profile" className={navLinkClass}>
+                  Profile
+                </Link>
+              </div>
               <form action={signOut}>
-                <SubmitButton variant="ghost" className="px-2.5! text-[13px] sm:px-5! sm:text-sm">
+                <SubmitButton
+                  variant="ghost"
+                  className="px-3! text-[13px] sm:px-5! sm:text-sm"
+                >
                   Sign out
                 </SubmitButton>
               </form>
             </>
           ) : (
-            <ButtonLink href="/login" variant="primary" className="text-sm">
-              Sign in
-            </ButtonLink>
+            <>
+              {/* Visible at every width (unlike the nav above): tickets are
+                  mostly opened on a phone at the entrance. */}
+              <Link href="/tickets" className={navLinkClass}>
+                My tickets
+              </Link>
+              <ButtonLink href="/login" variant="primary" className="text-sm">
+                Sign in
+              </ButtonLink>
+            </>
           )}
         </div>
       </div>
