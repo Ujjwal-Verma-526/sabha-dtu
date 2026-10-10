@@ -1,11 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/Card";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { BannerUpload } from "@/components/events/BannerUpload";
+import { EventForm } from "@/components/events/EventForm";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
 import { CancelEventButton } from "@/components/events/CancelEventButton";
 import { updateEvent, publishEvent, cancelEvent } from "../actions";
@@ -22,13 +20,10 @@ function toDatetimeLocal(iso: string): string {
 
 export default async function EditEventPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ clubId: string; eventId: string }>;
-  searchParams: Promise<{ error?: string }>;
 }) {
   const { clubId, eventId } = await params;
-  const { error } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -99,7 +94,7 @@ export default async function EditEventPage({
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {event.status === "draft" && (
-          <form action={publish}>
+          <ActionForm action={publish}>
             <SubmitButton
               variant="primary"
               className="text-sm"
@@ -107,7 +102,7 @@ export default async function EditEventPage({
             >
               Publish
             </SubmitButton>
-          </form>
+          </ActionForm>
         )}
         {(event.status === "draft" || event.status === "published") && (
           <CancelEventButton cancelAction={cancel} />
@@ -124,94 +119,24 @@ export default async function EditEventPage({
         )}
       </div>
 
-      {error && (
-        <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      )}
-
-      <Card className="mt-6">
-        <form action={updateWithIds} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Banner image</span>
-            <BannerUpload clubId={clubId} defaultValue={event.banner_url} />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Title</span>
-            <Input name="title" required defaultValue={event.title} />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Description</span>
-            <Textarea
-              name="description"
-              required
-              rows={4}
-              defaultValue={event.description ?? ""}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Venue</span>
-            <Input name="venue" required defaultValue={event.venue ?? ""} />
-          </label>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-ink">Starts</span>
-              <Input
-                name="start_at"
-                type="datetime-local"
-                required
-                defaultValue={toDatetimeLocal(event.start_at)}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-ink">Ends</span>
-              <Input
-                name="end_at"
-                type="datetime-local"
-                required
-                defaultValue={toDatetimeLocal(event.end_at)}
-              />
-            </label>
-          </div>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">
-              Registration deadline{" "}
-              <span className="font-normal text-ink-soft">(optional)</span>
-            </span>
-            <Input
-              name="registration_deadline"
-              type="datetime-local"
-              defaultValue={
-                event.registration_deadline
-                  ? toDatetimeLocal(event.registration_deadline)
-                  : ""
-              }
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">
-              Capacity{" "}
-              <span className="font-normal text-ink-soft">(optional)</span>
-            </span>
-            <Input
-              name="capacity"
-              type="number"
-              min={1}
-              defaultValue={event.capacity ?? ""}
-            />
-          </label>
-
-          <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
-            Save changes
-          </SubmitButton>
-        </form>
-      </Card>
+      <EventForm
+        clubId={clubId}
+        action={updateWithIds}
+        initialValues={{
+          title: event.title,
+          description: event.description ?? "",
+          venue: event.venue ?? "",
+          start_at: toDatetimeLocal(event.start_at),
+          end_at: toDatetimeLocal(event.end_at),
+          registration_deadline: event.registration_deadline
+            ? toDatetimeLocal(event.registration_deadline)
+            : "",
+          capacity: event.capacity == null ? "" : String(event.capacity),
+          banner_url: event.banner_url ?? "",
+        }}
+        submitLabel="Save changes"
+        pendingLabel="Saving…"
+      />
     </main>
   );
 }

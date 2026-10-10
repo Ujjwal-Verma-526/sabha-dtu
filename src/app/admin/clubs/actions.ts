@@ -3,8 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  actionError,
+  actionSuccess,
+  idleState,
+  type ActionState,
+} from "@/lib/action-state";
+import {
+  NOT_ALLOWED_MESSAGE,
   friendlyDbError,
   isForeignKeyViolation,
+  isRaisedException,
   isUniqueViolation,
 } from "@/lib/db-errors";
 import { createClient } from "@/lib/supabase/server";
@@ -115,48 +123,109 @@ export async function createClub(
 // Whitelisted fields only — never slug, verified, created_by, or id.
 // RLS (clubs_update_manager_or_super_admin + the protected-field trigger)
 // is the real backstop; this whitelist just keeps the form honest.
-export async function updateClub(clubId: string, formData: FormData) {
+export async function updateClub(
+  clubId: string,
+  _previousState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const { supabase } = await requireUser();
 
-  await supabase
+  const { data, error } = await supabase
     .from("clubs")
     .update({
-      description: (formData.get("description") as string) || null,
-      logo_url: (formData.get("logo_url") as string) || null,
-      category: (formData.get("category") as string) || null,
-      instagram_handle: (formData.get("instagram_handle") as string) || null,
+      description: readText(formData, "description") || null,
+      logo_url: readText(formData, "logo_url") || null,
+      category: readText(formData, "category") || null,
+      instagram_handle: readText(formData, "instagram_handle") || null,
     })
-    .eq("id", clubId);
+    .eq("id", clubId)
+    .select("id");
+
+  if (error) {
+    return actionError(friendlyDbError(error, "updating a club"));
+  }
+  if (data.length === 0) {
+    return actionError(NOT_ALLOWED_MESSAGE);
+  }
 
   revalidatePath(`/admin/clubs/${clubId}`);
   revalidatePath("/clubs");
+  return actionSuccess("Changes saved.");
 }
 
 // Only a super_admin's UPDATE actually changes `verified` — the
 // prevent_club_protected_field_changes trigger rejects anyone else's
-// attempt regardless of what this action does.
-export async function setClubVerified(clubId: string, verified: boolean) {
+// attempt (it raises, which surfaces here as a raised exception).
+export async function setClubVerified(
+  clubId: string,
+  verified: boolean,
+  _previousState: ActionState,
+): Promise<ActionState> {
   const { supabase } = await requireUser();
-  await supabase.from("clubs").update({ verified }).eq("id", clubId);
+
+  const { data, error } = await supabase
+    .from("clubs")
+    .update({ verified })
+    .eq("id", clubId)
+    .select("id");
+
+  if (error) {
+    const message = friendlyDbError(error, "changing club verification");
+    return actionError(
+      isRaisedException(error)
+        ? "Only a Sabha super admin can change verification."
+        : message,
+    );
+  }
+  if (data.length === 0) {
+    return actionError(NOT_ALLOWED_MESSAGE);
+  }
+
   revalidatePath(`/admin/clubs/${clubId}`);
   revalidatePath("/admin/clubs");
   revalidatePath("/clubs");
+  // The page re-renders with the new verified state, which is the confirmation.
+  return idleState;
 }
 
-export async function approveMembership(clubId: string, membershipId: string) {
+async function setMembershipStatus(
+  clubId: string,
+  membershipId: string,
+  status: "approved" | "rejected",
+): Promise<ActionState> {
   const { supabase } = await requireUser();
-  await supabase
+
+  const { data, error } = await supabase
     .from("club_members")
-    .update({ status: "approved" })
-    .eq("id", membershipId);
+    .update({ status })
+    .eq("id", membershipId)
+    .eq("club_id", clubId)
+    .select("id");
+
+  if (error) {
+    return actionError(friendlyDbError(error, `marking a membership ${status}`));
+  }
+  if (data.length === 0) {
+    return actionError(NOT_ALLOWED_MESSAGE);
+  }
+
+  // The request leaves the pending list when the page re-renders.
   revalidatePath(`/admin/clubs/${clubId}`);
+  return idleState;
 }
 
-export async function rejectMembership(clubId: string, membershipId: string) {
-  const { supabase } = await requireUser();
-  await supabase
-    .from("club_members")
-    .update({ status: "rejected" })
-    .eq("id", membershipId);
-  revalidatePath(`/admin/clubs/${clubId}`);
+export async function approveMembership(
+  clubId: string,
+  membershipId: string,
+  _previousState: ActionState,
+): Promise<ActionState> {
+  return setMembershipStatus(clubId, membershipId, "approved");
+}
+
+export async function rejectMembership(
+  clubId: string,
+  membershipId: string,
+  _previousState: ActionState,
+): Promise<ActionState> {
+  return setMembershipStatus(clubId, membershipId, "rejected");
 }

@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { ButtonLink } from "@/components/ui/Button";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
   updateClub,
@@ -108,7 +109,7 @@ export default async function AdminClubPage({
               ? "This club is verified and visible in the public directory."
               : "This club is unverified — hidden from the public directory."}
           </p>
-          <form
+          <ActionForm
             action={club.verified ? verifyOff : verifyOn}
             className="mt-3"
           >
@@ -118,13 +119,13 @@ export default async function AdminClubPage({
             >
               {club.verified ? "Unverify" : "Verify"}
             </SubmitButton>
-          </form>
+          </ActionForm>
         </Card>
       )}
 
       <Card className="mt-6">
         <p className="text-sm font-medium text-ink">Club details</p>
-        <form action={updateWithId} className="mt-4 flex flex-col gap-4">
+        <ActionForm action={updateWithId} className="mt-4 flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-ink">Category</span>
             <Input name="category" defaultValue={club.category ?? ""} />
@@ -155,7 +156,7 @@ export default async function AdminClubPage({
           <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
             Save changes
           </SubmitButton>
-        </form>
+        </ActionForm>
       </Card>
 
       <section className="mt-8">
@@ -180,16 +181,16 @@ export default async function AdminClubPage({
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <form action={reject}>
+                    <ActionForm action={reject}>
                       <SubmitButton variant="ghost" className="text-sm">
                         Reject
                       </SubmitButton>
-                    </form>
-                    <form action={approve}>
+                    </ActionForm>
+                    <ActionForm action={approve}>
                       <SubmitButton variant="primary" className="text-sm">
                         Approve
                       </SubmitButton>
-                    </form>
+                    </ActionForm>
                   </div>
                 </Card>
               );

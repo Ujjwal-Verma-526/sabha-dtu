@@ -1,22 +1,16 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/Card";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { SubmitButton } from "@/components/ui/SubmitButton";
-import { BannerUpload } from "@/components/events/BannerUpload";
+import { EventForm } from "@/components/events/EventForm";
+import { emptyEventValues } from "@/lib/event-form";
 import { createEvent } from "../actions";
 
 export default async function NewEventPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ clubId: string }>;
-  searchParams: Promise<{ error?: string }>;
 }) {
   const { clubId } = await params;
-  const { error } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -68,74 +62,13 @@ export default async function NewEventPage({
         Saves as a draft first — nothing is public until you publish it.
       </p>
 
-      {error && (
-        <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      )}
-
-      <Card className="mt-6">
-        <form action={createWithClub} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Banner image</span>
-            <BannerUpload clubId={clubId} />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Title</span>
-            <Input name="title" required placeholder="Robowars Finals" />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Description</span>
-            <Textarea
-              name="description"
-              required
-              rows={4}
-              placeholder="What's happening, who it's for, anything students should know before registering."
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Venue</span>
-            <Input name="venue" required placeholder="Main Auditorium" />
-          </label>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-ink">Starts</span>
-              <Input name="start_at" type="datetime-local" required />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-ink">Ends</span>
-              <Input name="end_at" type="datetime-local" required />
-            </label>
-          </div>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">
-              Registration deadline{" "}
-              <span className="font-normal text-ink-soft">(optional)</span>
-            </span>
-            <Input name="registration_deadline" type="datetime-local" />
-            <span className="text-xs text-ink-soft">
-              Must be at or before the start time.
-            </span>
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">
-              Capacity{" "}
-              <span className="font-normal text-ink-soft">(optional)</span>
-            </span>
-            <Input name="capacity" type="number" min={1} placeholder="200" />
-          </label>
-
-          <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
-            Save draft
-          </SubmitButton>
-        </form>
-      </Card>
+      <EventForm
+        clubId={clubId}
+        action={createWithClub}
+        initialValues={emptyEventValues}
+        submitLabel="Save draft"
+        pendingLabel="Saving…"
+      />
     </main>
   );
 }
