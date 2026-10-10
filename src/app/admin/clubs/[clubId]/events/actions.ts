@@ -13,6 +13,7 @@ import {
   isUniqueViolation,
 } from "@/lib/db-errors";
 import type { EventFormState, EventFormValues } from "@/lib/event-form";
+import { parseIstDateTimeLocal } from "@/lib/ist";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
 
@@ -98,24 +99,26 @@ function parseEventForm(
   if (!values.start_at) fieldErrors.start_at = "Start date/time is required.";
   if (!values.end_at) fieldErrors.end_at = "End date/time is required.";
 
-  const start = new Date(values.start_at);
-  const end = new Date(values.end_at);
-  if (values.start_at && Number.isNaN(start.getTime())) {
+  // The form's datetime-local values are IST wall-clock times; parsing them
+  // with new Date() would use the server's timezone (UTC on Vercel).
+  const start = parseIstDateTimeLocal(values.start_at);
+  const end = parseIstDateTimeLocal(values.end_at);
+  if (values.start_at && !start) {
     fieldErrors.start_at = "Start date/time is invalid.";
   }
-  if (values.end_at && Number.isNaN(end.getTime())) {
+  if (values.end_at && !end) {
     fieldErrors.end_at = "End date/time is invalid.";
   }
-  if (!fieldErrors.start_at && !fieldErrors.end_at && end < start) {
+  if (start && end && end < start) {
     fieldErrors.end_at = "End must be after start.";
   }
 
   let registrationDeadline: string | null = null;
   if (values.registration_deadline) {
-    const deadline = new Date(values.registration_deadline);
-    if (Number.isNaN(deadline.getTime())) {
+    const deadline = parseIstDateTimeLocal(values.registration_deadline);
+    if (!deadline) {
       fieldErrors.registration_deadline = "Registration deadline is invalid.";
-    } else if (!fieldErrors.start_at && deadline > start) {
+    } else if (start && deadline > start) {
       fieldErrors.registration_deadline =
         "Registration deadline must be before or at the start time.";
     } else {
@@ -131,7 +134,8 @@ function parseEventForm(
     }
   }
 
-  if (Object.keys(fieldErrors).length > 0) {
+  // start/end are only null when a field error has already been set.
+  if (Object.keys(fieldErrors).length > 0 || !start || !end) {
     return { fieldErrors };
   }
 
