@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
 import { RegisterCTA, type RegisterCTAState } from "@/components/events/RegisterCTA";
+import { ButtonLink } from "@/components/ui/Button";
+import { canManageClub, getViewerRoles } from "@/lib/roles";
 import { registerForEvent } from "./actions";
 
 async function getEvent(slug: string) {
@@ -10,7 +12,7 @@ async function getEvent(slug: string) {
   const { data } = await supabase
     .from("events")
     .select(
-      "id, title, slug, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status, club:clubs(name, slug, verified)",
+      "id, title, slug, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status, club:clubs(id, name, slug, verified)",
     )
     .eq("slug", slug)
     .eq("status", "published")
@@ -29,7 +31,7 @@ async function getEvent(slug: string) {
         registration_deadline: string | null;
         capacity: number | null;
         status: string;
-        club: { name: string; slug: string; verified: boolean } | null;
+        club: { id: string; name: string; slug: string; verified: boolean } | null;
       }
     | null;
 }
@@ -146,6 +148,22 @@ export default async function EventPage({
     registrationId,
   } = await getInitialCTAState(event);
 
+  // Display-only: whether to show manage controls. The admin pages
+  // re-check access themselves.
+  let canManage = false;
+  if (event.club) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      canManage = canManageClub(
+        await getViewerRoles(supabase, user.id),
+        event.club.id,
+      );
+    }
+  }
+
   const start = new Date(event.start_at);
   const end = new Date(event.end_at);
 
@@ -224,6 +242,19 @@ export default async function EventPage({
         <p className="mt-6 whitespace-pre-wrap text-ink-soft">
           {event.description}
         </p>
+      )}
+
+      {canManage && event.club && (
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <ButtonLink
+            href={`/admin/clubs/${event.club.id}/events/${event.id}`}
+            variant="ghost"
+            className="text-sm"
+          >
+            Edit event
+          </ButtonLink>
+          {/* "Scan tickets" button goes here once the door scanner exists. */}
+        </div>
       )}
 
       <div className="mt-8">

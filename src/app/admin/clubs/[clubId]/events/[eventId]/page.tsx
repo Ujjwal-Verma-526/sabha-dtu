@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ActionForm } from "@/components/ui/ActionForm";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { EventForm } from "@/components/events/EventForm";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
@@ -76,9 +77,14 @@ export default async function EditEventPage({
     <main className="mx-auto w-full max-w-lg flex-1 px-6 py-12">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wide text-ink-soft">
-            {club.name}
-          </p>
+          <Breadcrumbs
+            items={[
+              ...(isSuperAdmin ? [{ label: "Admin", href: "/admin/clubs" }] : []),
+              { label: club.name, href: `/admin/clubs/${clubId}` },
+              { label: "Events", href: `/admin/clubs/${clubId}/events` },
+              { label: event.title },
+            ]}
+          />
           <h1 className="font-display text-2xl font-bold text-ink">
             {event.title}
           </h1>

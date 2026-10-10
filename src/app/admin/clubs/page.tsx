@@ -5,6 +5,7 @@ import { ClubLogo } from "@/components/clubs/ClubLogo";
 import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 
 export default async function AdminClubsPage() {
   const supabase = await createClient();
@@ -38,6 +39,7 @@ export default async function AdminClubsPage() {
 
   return (
     <main className="mx-auto max-w-4xl flex-1 px-6 py-12">
+      <Breadcrumbs items={[{ label: "Admin" }]} />
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold text-ink">
           All clubs
