@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { NewClubForm } from "@/components/clubs/NewClubForm";
 
 export default async function NewClubPage() {
@@ -28,6 +29,12 @@ export default async function NewClubPage() {
 
   return (
     <main className="mx-auto w-full max-w-lg flex-1 px-6 py-12">
+      <Breadcrumbs
+        items={[
+          { label: "Admin", href: "/admin/clubs" },
+          { label: "New club" },
+        ]}
+      />
       <h1 className="font-display text-2xl font-bold text-ink">New club</h1>
       <p className="mt-1 text-sm text-ink-soft">
         Only real, verified-by-you DTU societies belong here — students

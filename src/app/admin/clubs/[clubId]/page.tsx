@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { ButtonLink } from "@/components/ui/Button";
@@ -70,6 +71,12 @@ export default async function AdminClubPage({
 
   return (
     <main className="mx-auto max-w-2xl flex-1 px-6 py-12">
+      <Breadcrumbs
+        items={[
+          ...(isSuperAdmin ? [{ label: "Admin", href: "/admin/clubs" }] : []),
+          { label: club.name },
+        ]}
+      />
       <h1 className="font-display text-2xl font-bold text-ink">
         {club.name}
       </h1>
@@ -77,13 +84,21 @@ export default async function AdminClubPage({
         /clubs/{club.slug}
       </p>
 
-      <ButtonLink
-        href={`/admin/clubs/${club.id}/events`}
-        variant="ghost"
-        className="mt-4 text-sm"
-      >
-        Manage events →
-      </ButtonLink>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <ButtonLink
+          href={`/admin/clubs/${club.id}/events`}
+          variant="ghost"
+          className="text-sm"
+        >
+          Manage events →
+        </ButtonLink>
+        <a
+          href={`/clubs/${club.slug}`}
+          className="text-sm text-primary hover:underline"
+        >
+          View public page →
+        </a>
+      </div>
 
       {isSuperAdmin && (
         <Card className="mt-6">

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -54,9 +55,14 @@ export default async function NewEventPage({
 
   return (
     <main className="mx-auto w-full max-w-lg flex-1 px-6 py-12">
-      <p className="font-mono text-xs uppercase tracking-wide text-ink-soft">
-        {club.name}
-      </p>
+      <Breadcrumbs
+        items={[
+          ...(isSuperAdmin ? [{ label: "Admin", href: "/admin/clubs" }] : []),
+          { label: club.name, href: `/admin/clubs/${clubId}` },
+          { label: "Events", href: `/admin/clubs/${clubId}/events` },
+          { label: "New event" },
+        ]}
+      />
       <h1 className="font-display text-2xl font-bold text-ink">New event</h1>
       <p className="mt-1 text-sm text-ink-soft">
         Saves as a draft first — nothing is public until you publish it.

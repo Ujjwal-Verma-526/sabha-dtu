@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { ButtonLink } from "@/components/ui/Button";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
 import type { EventStatus } from "@/lib/supabase/types";
@@ -84,9 +85,13 @@ export default async function ClubEventsPage({
     <main className="mx-auto max-w-3xl flex-1 px-6 py-12">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wide text-ink-soft">
-            {club.name}
-          </p>
+          <Breadcrumbs
+            items={[
+              ...(isSuperAdmin ? [{ label: "Admin", href: "/admin/clubs" }] : []),
+              { label: club.name, href: `/admin/clubs/${clubId}` },
+              { label: "Events" },
+            ]}
+          />
           <h1 className="font-display text-2xl font-bold text-ink">
             Events
           </h1>
