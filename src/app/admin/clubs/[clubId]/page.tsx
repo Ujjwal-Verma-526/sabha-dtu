@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { ButtonLink } from "@/components/ui/Button";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { formatIstDate } from "@/lib/ist";
 import {
   updateClub,
   setClubVerified,
@@ -177,7 +178,7 @@ export default async function AdminClubPage({
                     <p className="font-medium text-ink">{m.name}</p>
                     <p className="font-mono text-xs text-ink-soft">
                       Requested{" "}
-                      {new Date(m.joined_at).toLocaleDateString("en-IN")}
+                      {formatIstDate(m.joined_at)}
                     </p>
                   </div>
                   <div className="flex gap-2">

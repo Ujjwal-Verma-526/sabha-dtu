@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
 import { RegisterCTA, type RegisterCTAState } from "@/components/events/RegisterCTA";
 import { ButtonLink } from "@/components/ui/Button";
+import { formatIstDateTime, formatIstTime, isSameIstDay } from "@/lib/ist";
 import { canManageClub, getViewerRoles } from "@/lib/roles";
 import { registerForEvent } from "./actions";
 
@@ -164,8 +165,10 @@ export default async function EventPage({
     }
   }
 
-  const start = new Date(event.start_at);
-  const end = new Date(event.end_at);
+  // A multi-day event shows its end date too, not just the end time.
+  const endLabel = isSameIstDay(event.start_at, event.end_at)
+    ? formatIstTime(event.end_at)
+    : formatIstDateTime(event.end_at);
 
   return (
     <main className="mx-auto max-w-2xl flex-1 px-6 py-12">
@@ -199,12 +202,12 @@ export default async function EventPage({
             Date &amp; time
           </dt>
           <dd className="mt-0.5 text-ink">
-            {start.toLocaleString("en-IN", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-            {" – "}
-            {end.toLocaleString("en-IN", { timeStyle: "short" })}
+            {/* nowrap per side, so a narrow screen breaks at the dash
+                rather than mid-time ("2:00" / "am"). */}
+            <span className="whitespace-nowrap">
+              {formatIstDateTime(event.start_at)} –
+            </span>{" "}
+            <span className="whitespace-nowrap">{endLabel}</span>
           </dd>
         </div>
         {event.venue && (
@@ -221,10 +224,7 @@ export default async function EventPage({
               Registration closes
             </dt>
             <dd className="mt-0.5 text-ink">
-              {new Date(event.registration_deadline).toLocaleString("en-IN", {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
+              {formatIstDateTime(event.registration_deadline)}
             </dd>
           </div>
         )}

@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Card } from "@/components/ui/Card";
+import { formatIstDateTime } from "@/lib/ist";
 import { requestToJoin } from "./actions";
 
 export default async function ClubPage({
@@ -136,10 +137,7 @@ export default async function ClubPage({
                   {event.title}
                 </p>
                 <p className="mt-1 font-mono text-xs text-ink-soft">
-                  {new Date(event.start_at).toLocaleString("en-IN", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
+                  {formatIstDateTime(event.start_at)}
                   {event.venue ? ` · ${event.venue}` : ""}
                 </p>
               </Card>

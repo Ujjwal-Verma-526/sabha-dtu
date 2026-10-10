@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { ButtonLink } from "@/components/ui/Button";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
+import { formatIstDateTime } from "@/lib/ist";
 import type { EventStatus } from "@/lib/supabase/types";
 
 const SECTIONS: { status: EventStatus; label: string; hint: string }[] = [
@@ -134,10 +135,7 @@ export default async function ClubEventsPage({
                           {event.title}
                         </p>
                         <p className="font-mono text-xs text-ink-soft">
-                          {new Date(event.start_at).toLocaleString("en-IN", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}
+                          {formatIstDateTime(event.start_at)}
                         </p>
                       </div>
                       <EventStatusBadge status={event.status} />
