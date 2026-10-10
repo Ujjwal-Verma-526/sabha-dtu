@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { ButtonLink } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { updateProfile, signOut } from "./actions";
 
 export default async function ProfilePage() {
@@ -41,9 +42,9 @@ export default async function ProfilePage() {
           Your profile
         </h1>
         <form action={signOut}>
-          <Button type="submit" variant="ghost" className="text-sm">
+          <SubmitButton variant="ghost" className="text-sm">
             Sign out
-          </Button>
+          </SubmitButton>
         </form>
       </div>
 
@@ -114,9 +115,9 @@ export default async function ProfilePage() {
             />
           </label>
 
-          <Button type="submit" variant="primary" className="mt-2">
+          <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
             Save changes
-          </Button>
+          </SubmitButton>
         </form>
       </Card>
     </main>

@@ -11,7 +11,7 @@ const variants = {
 type Variant = keyof typeof variants;
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+  "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60";
 
 type ButtonProps = ComponentPropsWithoutRef<"button"> & { variant?: Variant };
 

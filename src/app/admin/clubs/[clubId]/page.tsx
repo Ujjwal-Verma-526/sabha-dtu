@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { ButtonLink } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
   updateClub,
   setClubVerified,
@@ -96,13 +97,12 @@ export default async function AdminClubPage({
             action={club.verified ? verifyOff : verifyOn}
             className="mt-3"
           >
-            <Button
-              type="submit"
+            <SubmitButton
               variant={club.verified ? "ghost" : "primary"}
               className="text-sm"
             >
               {club.verified ? "Unverify" : "Verify"}
-            </Button>
+            </SubmitButton>
           </form>
         </Card>
       )}
@@ -137,9 +137,9 @@ export default async function AdminClubPage({
             />
           </label>
 
-          <Button type="submit" variant="primary" className="mt-2">
+          <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
             Save changes
-          </Button>
+          </SubmitButton>
         </form>
       </Card>
 
@@ -166,18 +166,14 @@ export default async function AdminClubPage({
                   </div>
                   <div className="flex gap-2">
                     <form action={reject}>
-                      <Button type="submit" variant="ghost" className="text-sm">
+                      <SubmitButton variant="ghost" className="text-sm">
                         Reject
-                      </Button>
+                      </SubmitButton>
                     </form>
                     <form action={approve}>
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        className="text-sm"
-                      >
+                      <SubmitButton variant="primary" className="text-sm">
                         Approve
-                      </Button>
+                      </SubmitButton>
                     </form>
                   </div>
                 </Card>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
 
@@ -127,7 +128,6 @@ export async function createEvent(clubId: string, formData: FormData) {
 
   const baseSlug = slugify(parsed.title);
   let event: { id: string } | null = null;
-  let lastError: string | null = null;
 
   // events.slug is globally unique (not scoped to a club), so a collision
   // with another club's event is possible. Retry a few times with a short
@@ -161,19 +161,18 @@ export async function createEvent(clubId: string, formData: FormData) {
 
     if (!error) {
       event = data;
-    } else if (error.code === "23505") {
-      lastError = error.message;
+    } else if (isUniqueViolation(error)) {
       continue;
     } else {
       redirect(
-        `/admin/clubs/${clubId}/events/new?error=${encodeURIComponent(error.message)}`,
+        `/admin/clubs/${clubId}/events/new?error=${encodeURIComponent(friendlyDbError(error, "creating an event"))}`,
       );
     }
   }
 
   if (!event) {
     redirect(
-      `/admin/clubs/${clubId}/events/new?error=${encodeURIComponent(lastError ?? "Could not create event, try again.")}`,
+      `/admin/clubs/${clubId}/events/new?error=${encodeURIComponent("An event with a very similar title already exists. Try a different title.")}`,
     );
   }
 
@@ -214,7 +213,7 @@ export async function updateEvent(
 
   if (error) {
     redirect(
-      `/admin/clubs/${clubId}/events/${eventId}?error=${encodeURIComponent(error.message)}`,
+      `/admin/clubs/${clubId}/events/${eventId}?error=${encodeURIComponent(friendlyDbError(error, "updating an event"))}`,
     );
   }
 
