@@ -104,13 +104,22 @@ export default async function ClubPage({
           status={membership?.status ?? null}
         />
         {isManager && (
-          <ButtonLink
-            href={`/admin/clubs/${club.id}`}
-            variant="ghost"
-            className="text-sm"
-          >
-            Manage club
-          </ButtonLink>
+          <>
+            <ButtonLink
+              href={`/admin/clubs/${club.id}`}
+              variant="ghost"
+              className="text-sm"
+            >
+              Manage club
+            </ButtonLink>
+            <ButtonLink
+              href={`/admin/clubs/${club.id}/events/new`}
+              variant="ghost"
+              className="text-sm"
+            >
+              Create event
+            </ButtonLink>
+          </>
         )}
       </div>
 
