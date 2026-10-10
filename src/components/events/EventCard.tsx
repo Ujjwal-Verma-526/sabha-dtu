@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
+import { formatIstDateTime } from "@/lib/ist";
 
 export type EventCardData = {
   slug: string;
@@ -12,8 +13,6 @@ export type EventCardData = {
 };
 
 export function EventCard({ event }: { event: EventCardData }) {
-  const start = new Date(event.start_at);
-
   return (
     <Link
       href={`/events/${event.slug}`}
@@ -47,10 +46,7 @@ export function EventCard({ event }: { event: EventCardData }) {
         </h3>
 
         <p className="font-mono text-xs text-ink-soft">
-          {start.toLocaleString("en-IN", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          })}
+          {formatIstDateTime(event.start_at)}
         </p>
 
         {event.venue && <p className="text-sm text-ink-soft">{event.venue}</p>}

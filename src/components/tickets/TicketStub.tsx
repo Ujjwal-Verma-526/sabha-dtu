@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IST_TIME_ZONE } from "@/lib/ist";
 import { cn } from "@/lib/utils";
 import type { TicketState } from "@/lib/tickets";
 
@@ -13,19 +14,19 @@ export type TicketStubData = {
   clubName: string;
 };
 
-// DTU events are in IST; the server may run in UTC (Vercel), so the zone
-// is set explicitly rather than taken from the server.
+// The ticket's own longer date style, in IST like every event time (see
+// src/lib/ist.ts).
 const dateFormat = new Intl.DateTimeFormat("en-IN", {
   weekday: "short",
   day: "numeric",
   month: "short",
   year: "numeric",
-  timeZone: "Asia/Kolkata",
+  timeZone: IST_TIME_ZONE,
 });
 const timeFormat = new Intl.DateTimeFormat("en-IN", {
   hour: "numeric",
   minute: "2-digit",
-  timeZone: "Asia/Kolkata",
+  timeZone: IST_TIME_ZONE,
 });
 
 const stateLabel: Record<TicketState, string> = {

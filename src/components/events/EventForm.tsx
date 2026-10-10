@@ -123,7 +123,9 @@ export function EventForm({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-ink">Starts</span>
+              <span className="font-medium text-ink">
+                Starts <span className="font-normal text-ink-soft">(IST)</span>
+              </span>
               <Input
                 name="start_at"
                 type="datetime-local"
@@ -134,7 +136,9 @@ export function EventForm({
               <FieldError name="start_at" message={fieldErrors.start_at} />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-ink">Ends</span>
+              <span className="font-medium text-ink">
+                Ends <span className="font-normal text-ink-soft">(IST)</span>
+              </span>
               <Input
                 name="end_at"
                 type="datetime-local"
@@ -149,7 +153,7 @@ export function EventForm({
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-ink">
               Registration deadline{" "}
-              <span className="font-normal text-ink-soft">(optional)</span>
+              <span className="font-normal text-ink-soft">(IST, optional)</span>
             </span>
             <Input
               name="registration_deadline"

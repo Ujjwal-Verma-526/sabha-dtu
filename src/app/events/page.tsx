@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { EventCard, type EventCardData } from "@/components/events/EventCard";
+import { istDayRange } from "@/lib/ist";
 import { cn } from "@/lib/utils";
 
 export const metadata = {
@@ -38,10 +39,12 @@ export default async function EventsPage({
     query = query.eq("club.category", category);
   }
   if (date) {
-    const start = new Date(`${date}T00:00:00`);
-    const end = new Date(`${date}T23:59:59.999`);
-    if (!Number.isNaN(start.getTime())) {
-      query = query.gte("start_at", start.toISOString()).lte("start_at", end.toISOString());
+    // The picked date is an IST calendar day, whatever the server's zone.
+    const day = istDayRange(date);
+    if (day) {
+      query = query
+        .gte("start_at", day.start.toISOString())
+        .lt("start_at", day.nextDayStart.toISOString());
     }
   }
 

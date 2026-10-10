@@ -6,17 +6,8 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 import { EventForm } from "@/components/events/EventForm";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
 import { CancelEventButton } from "@/components/events/CancelEventButton";
+import { toIstDateTimeLocal } from "@/lib/ist";
 import { updateEvent, publishEvent, cancelEvent } from "../actions";
-
-// <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm" in local time —
-// toISOString() gives UTC with seconds/millis, so this trims and shifts.
-function toDatetimeLocal(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
-}
 
 export default async function EditEventPage({
   params,
@@ -126,10 +117,10 @@ export default async function EditEventPage({
           title: event.title,
           description: event.description ?? "",
           venue: event.venue ?? "",
-          start_at: toDatetimeLocal(event.start_at),
-          end_at: toDatetimeLocal(event.end_at),
+          start_at: toIstDateTimeLocal(event.start_at),
+          end_at: toIstDateTimeLocal(event.end_at),
           registration_deadline: event.registration_deadline
-            ? toDatetimeLocal(event.registration_deadline)
+            ? toIstDateTimeLocal(event.registration_deadline)
             : "",
           capacity: event.capacity == null ? "" : String(event.capacity),
           banner_url: event.banner_url ?? "",
