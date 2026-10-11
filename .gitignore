@@ -43,3 +43,6 @@ next-env.d.ts
 
 # supabase cli local cache
 supabase/.temp/
+
+# copied from node_modules by scripts/copy-zxing-wasm.mjs
+/public/vendor/zxing/
