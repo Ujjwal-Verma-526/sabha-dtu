@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IST_TIME_ZONE } from "@/lib/ist";
+import { formatIstDateTime, formatIstTime, isSameIstDay, IST_TIME_ZONE } from "@/lib/ist";
 import { cn } from "@/lib/utils";
 import type { TicketState } from "@/lib/tickets";
 
@@ -48,6 +48,15 @@ const stateBadgeClass: Record<TicketState, string> = {
   ended: "border-line bg-ink/5 text-ink-soft",
   cancelled: "border-red-200 bg-red-50 text-red-700",
 };
+
+// "Checked in at 6:42 pm", with the date too if it isn't the event's day.
+function checkedInLabel(checkedInAt: string, eventStartAt: string): string {
+  return isSameIstDay(checkedInAt, eventStartAt)
+    ? `Checked in at ${formatIstTime(checkedInAt)}`
+    : `Checked in at ${formatIstDateTime(checkedInAt)}`;
+}
+
+const checkedInPillClass = cn(pillBase, "border-primary/30 bg-primary/10 text-primary");
 
 // Shown in place of the QR for every state that must not be scannable.
 const noQrMessage: Record<Exclude<TicketState, "active">, string> = {
@@ -124,10 +133,8 @@ export function TicketStub({
             {ticket.ticketCode}
           </p>
           {ticket.checkedInAt ? (
-            <span
-              className={cn(pillBase, "mt-3 border-primary/30 bg-primary/10 text-primary")}
-            >
-              Checked in
+            <span className={cn(checkedInPillClass, "mt-3")}>
+              {checkedInLabel(ticket.checkedInAt, ticket.eventStartAt)}
             </span>
           ) : (
             <p className="mt-3 text-center text-xs text-ink-soft">
@@ -157,6 +164,14 @@ export function TicketStub({
             {stateLabel[state]}
           </span>
           <span className="text-xs">{noQrMessage[state]}</span>
+        </div>
+      )}
+
+      {state !== "active" && ticket.checkedInAt && (
+        <div className="mt-3 flex justify-center">
+          <span className={checkedInPillClass}>
+            {checkedInLabel(ticket.checkedInAt, ticket.eventStartAt)}
+          </span>
         </div>
       )}
     </article>
