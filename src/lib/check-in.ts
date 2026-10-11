@@ -3,9 +3,10 @@ import { effectiveEventEnd } from "@/lib/tickets";
 import { formatIstDateTime, formatIstTime, isSameIstDay } from "@/lib/ist";
 
 // Door check-in window, for DISPLAY only. The database decides: these
-// offsets mirror check_in_gate in
-// supabase/migrations/20260830000001_door_checkin.sql (which also uses the
-// effective-end rule from effectiveEventEnd). Change them together.
+// offsets mirror check_in_gate (supabase/migrations/20260830000001_door_
+// checkin.sql, rewritten in 20260831000001 to take the effective end from
+// event_effective_end, the SQL twin of effectiveEventEnd). Change them
+// together.
 export const CHECK_IN_OPENS_BEFORE_START_HOURS = 2;
 export const CHECK_IN_CLOSES_AFTER_END_HOURS = 1;
 

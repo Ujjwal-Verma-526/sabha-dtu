@@ -61,7 +61,7 @@ export function RegisterCTA({
           setState("full");
           break;
         case "closed":
-        case "deadline_passed":
+        case "registration_closed":
         case "not_found":
           setState("closed");
           break;
@@ -84,7 +84,7 @@ export function RegisterCTA({
   }
 
   if (state === "closed") {
-    return <Badge>Registration Closed</Badge>;
+    return <Badge>Registration closed</Badge>;
   }
 
   if (state === "login_required") {

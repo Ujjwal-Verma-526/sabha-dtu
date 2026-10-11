@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isRegistrationClosed } from "@/lib/event-timing";
 import { createClient } from "@/lib/supabase/server";
 
 export type RegisterResult =
@@ -19,7 +20,7 @@ export type RegisterResult =
         | "not_found"
         | "cancelled"
         | "closed"
-        | "deadline_passed"
+        | "registration_closed"
         | "full"
         | "unknown";
       message: string;
@@ -31,7 +32,8 @@ export type RegisterResult =
 // restricts the insert to the caller's own user_id on a published event,
 // the unique(event_id, user_id) constraint stops duplicates, and the
 // enforce_registration_rules trigger (20260828000001_event_registration_
-// guards.sql) re-checks status/deadline/capacity with a row lock so it
+// guards.sql, closing rule replaced in 20260831000001_registration_closes_
+// at_start.sql) re-checks status/closing time/capacity with a row lock so it
 // can't be raced by two concurrent submissions. A client can't get a
 // registration created by skipping any of this.
 export async function registerForEvent(
@@ -74,7 +76,7 @@ export async function registerForEvent(
 
   const { data: event } = await supabase
     .from("events")
-    .select("status, registration_deadline, capacity")
+    .select("status, start_at, registration_deadline, capacity")
     .eq("id", eventId)
     .maybeSingle();
 
@@ -102,14 +104,11 @@ export async function registerForEvent(
     };
   }
 
-  if (
-    event.registration_deadline &&
-    new Date() > new Date(event.registration_deadline)
-  ) {
+  if (isRegistrationClosed(event, new Date())) {
     return {
       ok: false,
-      reason: "deadline_passed",
-      message: "The registration deadline has passed.",
+      reason: "registration_closed",
+      message: "Registration is closed for this event.",
     };
   }
 
@@ -152,11 +151,11 @@ export async function registerForEvent(
       }
     }
 
-    if (error.message.includes("deadline has passed")) {
+    if (error.message.includes("registration is closed")) {
       return {
         ok: false,
-        reason: "deadline_passed",
-        message: "The registration deadline has passed.",
+        reason: "registration_closed",
+        message: "Registration is closed for this event.",
       };
     }
     if (error.message.includes("at capacity")) {
