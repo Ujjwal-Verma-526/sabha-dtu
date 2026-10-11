@@ -253,7 +253,13 @@ export default async function EventPage({
           >
             Edit event
           </ButtonLink>
-          {/* "Scan tickets" button goes here once the door scanner exists. */}
+          <ButtonLink
+            href={`/admin/clubs/${event.club.id}/events/${event.id}/scan`}
+            variant="primary"
+            className="text-sm"
+          >
+            Scan tickets
+          </ButtonLink>
         </div>
       )}
 

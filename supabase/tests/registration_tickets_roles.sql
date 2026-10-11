@@ -48,10 +48,10 @@ insert into public.clubs (id, name, slug, verified, created_by) values
 
 insert into public.events (id, club_id, title, slug, venue, start_at, end_at, status, created_by) values
   ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000c1',
-   'Test Event', 'test-event', 'Main Auditorium', now() + interval '2 days',
+   'Test Event', 'rt-test-event', 'Main Auditorium', now() + interval '2 days',
    now() + interval '2 days 3 hours', 'published', '00000000-0000-0000-0000-00000000000c'),
   ('00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000c1',
-   'Second Event', 'second-event', 'OAT', now() + interval '5 days',
+   'Second Event', 'rt-second-event', 'OAT', now() + interval '5 days',
    now() + interval '5 days 2 hours', 'published', '00000000-0000-0000-0000-00000000000c');
 
 -- ---------------------------------------------------------------- 1. issuance
@@ -172,14 +172,17 @@ begin
   end;
 end $$;
 
--- Regression: the door path (manager sets checked_in_at) still works.
+-- Since 20260830000001_door_checkin, check-in only changes through the
+-- check-in RPCs; a manager's direct UPDATE of checked_in_at is refused.
+-- (Full coverage is in door_checkin_roles.sql.)
 do $$
-declare n int;
 begin
   update public.event_registrations set checked_in_at = now()
   where id = pg_temp.ctx('a_reg')::uuid;
-  get diagnostics n = row_count;
-  perform pg_temp.ok('16 manager can still set checked_in_at (no regression)', n = 1, n || ' rows updated');
+  perform pg_temp.ok('16 manager can''t set checked_in_at directly (door check-in guard)', false, 'update succeeded');
+exception when raise_exception then
+  perform pg_temp.ok('16 manager can''t set checked_in_at directly (door check-in guard)',
+    sqlerrm = 'check-in can only change through the door check-in functions', sqlerrm);
 end $$;
 
 -- ---------------------------------------------------------------- 5. super_admin (S)
@@ -188,7 +191,9 @@ do $$
 declare n_t int; n_r int;
 begin
   select count(*) into n_t from public.registration_tickets;
-  select count(*) into n_r from public.event_registrations;
+  -- Only this test's events: a super_admin also sees any other local data.
+  select count(*) into n_r from public.event_registrations
+  where event_id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2');
   perform pg_temp.ok('17 super_admin cannot read any tokens', n_t = 0, n_t || ' ticket rows visible');
   perform pg_temp.ok('18 super_admin still sees registrations (policy unchanged)', n_r = 2, n_r || ' registrations visible');
 end $$;

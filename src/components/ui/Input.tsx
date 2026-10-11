@@ -1,10 +1,12 @@
 import { cn } from "@/lib/utils";
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentProps } from "react";
 
+// ComponentProps (not ...WithoutRef): in React 19 `ref` is an ordinary
+// prop, and the spread passes it through to the <input>.
 export function Input({
   className,
   ...props
-}: ComponentPropsWithoutRef<"input">) {
+}: ComponentProps<"input">) {
   return (
     <input
       className={cn(
