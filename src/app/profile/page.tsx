@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { ProfileForm } from "@/components/profile/ProfileForm";
 import { updateProfile, signOut } from "./actions";
 
 export default async function ProfilePage() {
@@ -65,60 +66,16 @@ export default async function ProfilePage() {
           Signed in as <span className="font-mono text-ink">{profile.email}</span>
         </p>
 
-        <form action={updateProfile} className="mt-6 flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Name</span>
-            <input
-              name="name"
-              defaultValue={profile.name}
-              required
-              className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Roll number</span>
-            <input
-              name="roll_number"
-              defaultValue={profile.roll_number ?? ""}
-              className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Branch</span>
-            <input
-              name="branch"
-              defaultValue={profile.branch ?? ""}
-              className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Batch year</span>
-            <input
-              name="batch_year"
-              type="number"
-              min={2000}
-              max={2100}
-              defaultValue={profile.batch_year ?? ""}
-              className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Avatar URL</span>
-            <input
-              name="avatar_url"
-              defaultValue={profile.avatar_url ?? ""}
-              className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-            />
-          </label>
-
-          <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
-            Save changes
-          </SubmitButton>
-        </form>
+        <ProfileForm
+          action={updateProfile}
+          initialValues={{
+            name: profile.name,
+            roll_number: profile.roll_number ?? "",
+            branch: profile.branch ?? "",
+            batch_year: profile.batch_year?.toString() ?? "",
+            avatar_url: profile.avatar_url ?? "",
+          }}
+        />
       </Card>
     </main>
   );
