@@ -91,12 +91,14 @@ insert into public.club_members (club_id, user_id, role, status) values
 -- Events are created published so students can register, then moved to
 -- their test status. The window opens 2 h before start and closes 1 h after
 -- the effective end (end_at, or start + 4 h when end_at = start_at).
-do $$
-declare
-  spec record;
-  eid uuid;
-begin
-  for spec in
+--
+-- Registration closes at start_at (20260831000001), so an event that has
+-- already started can't be registered for. Every event is therefore created
+-- starting tomorrow, registered, and only then moved to its real times
+-- (below, after the registrations).
+create temp table t_event_spec (name text primary key, club text, start_offset interval, end_offset interval);
+grant all on t_event_spec to public;
+insert into t_event_spec
     select * from (values
       ('in',         'club1', interval '1 hour',               interval '3 hours'),
       ('in2',        'club1', interval '30 minutes',           interval '2 hours'),
@@ -113,11 +115,17 @@ begin
       ('edge_early', 'club1', interval '2 hours 1 second',     interval '4 hours'),
       ('edge_close', 'club1', interval '-4 hours',             interval '-1 hour'),
       ('edge_late',  'club1', interval '-4 hours',             interval '-1 hour -1 second')
-    ) as s(name, club, start_offset, end_offset)
-  loop
+    ) as s(name, club, start_offset, end_offset);
+
+do $$
+declare
+  spec record;
+  eid uuid;
+begin
+  for spec in select * from t_event_spec loop
     insert into public.events (club_id, title, slug, venue, start_at, end_at, status, created_by)
     values (pg_temp.ctx(spec.club)::uuid, 'DC ' || spec.name, 'dc-' || replace(spec.name, '_', '-'), 'Hall',
-            now() + spec.start_offset, now() + spec.end_offset, 'published',
+            now() + interval '1 day', now() + interval '1 day 1 hour', 'published',
             case spec.club when 'club1' then pg_temp.uid('M') else pg_temp.uid('M2') end)
     returning id into eid;
     insert into t_ctx values ('ev_' || spec.name, eid::text);
@@ -147,6 +155,14 @@ begin
       from public.registration_tickets t where t.registration_id = rid;
   end loop;
 end $$;
+
+-- Move every event to its real times now that the registrations exist.
+-- (now() is fixed inside the transaction, so the offsets are exact.)
+update public.events e
+   set start_at = now() + s.start_offset,
+       end_at   = now() + s.end_offset
+  from t_event_spec s
+ where e.id = pg_temp.ev(s.name);
 
 update public.events set status = 'cancelled' where id = pg_temp.ev('cxl');
 update public.events set status = 'draft'     where id = pg_temp.ev('draft');

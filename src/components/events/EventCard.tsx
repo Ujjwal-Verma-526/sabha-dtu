@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
-import { formatIstDateTime } from "@/lib/ist";
+import { formatIstDateTime, formatIstTime, isSameIstDay } from "@/lib/ist";
 
 export type EventCardData = {
   slug: string;
@@ -8,11 +8,19 @@ export type EventCardData = {
   banner_url: string | null;
   venue: string | null;
   start_at: string;
+  end_at?: string;
   capacity: number | null;
   club: { name: string; slug: string; verified: boolean };
 };
 
-export function EventCard({ event }: { event: EventCardData }) {
+export function EventCard({
+  event,
+  live = false,
+}: {
+  event: EventCardData;
+  /** In the "Happening now" section: also show when it ends. */
+  live?: boolean;
+}) {
   return (
     <Link
       href={`/events/${event.slug}`}
@@ -46,8 +54,17 @@ export function EventCard({ event }: { event: EventCardData }) {
         </h3>
 
         <p className="font-mono text-xs text-ink-soft">
+          {live ? "Started " : ""}
           {formatIstDateTime(event.start_at)}
         </p>
+        {live && event.end_at && event.end_at !== event.start_at && (
+          <p className="font-mono text-xs text-ink-soft">
+            Ends{" "}
+            {isSameIstDay(event.start_at, event.end_at)
+              ? formatIstTime(event.end_at)
+              : formatIstDateTime(event.end_at)}
+          </p>
+        )}
 
         {event.venue && <p className="text-sm text-ink-soft">{event.venue}</p>}
 

@@ -55,6 +55,9 @@ async function requireClubManager(clubId: string) {
   return { supabase, user };
 }
 
+const DEADLINE_AFTER_END_MESSAGE =
+  "Registration deadline must be on or before the end time.";
+
 type EventInput = {
   title: string;
   description: string;
@@ -85,7 +88,7 @@ function readEventValues(formData: FormData): EventFormValues {
 
 // Shared shape/business-rule validation for create and update. The same
 // invariants are also enforced as CHECK constraints on public.events
-// (events_end_after_start, events_deadline_before_start,
+// (events_end_after_start, events_deadline_before_end,
 // events_capacity_positive) — this gives a friendly field error before
 // the database is involved, and mapEventDbError covers the rest.
 function parseEventForm(
@@ -118,9 +121,8 @@ function parseEventForm(
     const deadline = parseIstDateTimeLocal(values.registration_deadline);
     if (!deadline) {
       fieldErrors.registration_deadline = "Registration deadline is invalid.";
-    } else if (start && deadline > start) {
-      fieldErrors.registration_deadline =
-        "Registration deadline must be before or at the start time.";
+    } else if (end && deadline > end) {
+      fieldErrors.registration_deadline = DEADLINE_AFTER_END_MESSAGE;
     } else {
       registrationDeadline = deadline.toISOString();
     }
@@ -172,10 +174,9 @@ function mapEventDbError(
     if (error.message.includes("events_end_after_start")) {
       return eventFormError(values, { end_at: "End must be after start." });
     }
-    if (error.message.includes("events_deadline_before_start")) {
+    if (error.message.includes("events_deadline_before_end")) {
       return eventFormError(values, {
-        registration_deadline:
-          "Registration deadline must be before or at the start time.",
+        registration_deadline: DEADLINE_AFTER_END_MESSAGE,
       });
     }
     if (error.message.includes("events_capacity_positive")) {

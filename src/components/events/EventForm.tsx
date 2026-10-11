@@ -166,7 +166,8 @@ export function EventForm({
               message={fieldErrors.registration_deadline}
             />
             <span className="text-xs text-ink-soft">
-              Must be at or before the start time.
+              Leave blank to close registration when the event starts. A later
+              deadline keeps it open while the event runs, up to the end time.
             </span>
           </label>
 

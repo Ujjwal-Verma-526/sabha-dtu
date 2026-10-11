@@ -18,12 +18,13 @@ Sabha is a DTU-first society/event management web app.
 
 - **The live project has no CLI migration history.** Migrations are applied by hand in the Supabase SQL editor, and `supabase_migrations.schema_migrations` does not exist on live. Never assume CLI history and never suggest `supabase db push` against live. To ship a migration, hand the user one SQL file to paste plus a verification query; never apply anything to live yourself.
 - Applied on live: `20260825000001` through `20260829000001` (registration guards and QR tickets were applied by hand on 2026-10-08). Treat them as applied; never recreate or modify them.
-- **Not yet on live:** `20260830000001_door_checkin.sql`. The user pastes `supabase/live/20260830000001_door_checkin.sql`, then runs the read-only `supabase/tests/verify_door_checkin_live.sql` (every row `ok = true`). After that, `verify_registration_tickets_live.sql`'s exact-trigger-list row reads false by design; use the door check-in verify query instead.
+- **Live status of the newest migrations is the user's to confirm** (they paste by hand). `20260830000001_door_checkin.sql`: paste `supabase/live/20260830000001_door_checkin.sql`, then run the read-only `supabase/tests/verify_door_checkin_live.sql` (every row `ok = true`); after that, `verify_registration_tickets_live.sql`'s exact-trigger-list row reads false by design. `20260831000001_registration_closes_at_start.sql`: paste `supabase/live/20260831000001_registration_closes_at_start.sql`, then run `supabase/tests/verify_registration_closes_at_start_live.sql`. The two are independent and can go in either order. Ask which are applied before assuming.
 - Shipping a migration to live: put `begin;` + the migration body (byte-for-byte) + `commit;` in `supabase/live/<migration>.sql`, start it with a precondition block that fails if the previous migration is missing or this one is already applied, and add a read-only `supabase/tests/verify_<name>_live.sql`. Dry-run both on a clone of the local DB first (see "Local Supabase").
 - pgcrypto lives in the `extensions` schema on live and locally: call `extensions.gen_random_bytes`, never the unqualified name.
 - New database changes require new migration files.
 - RLS/security is critical. Never weaken existing policies merely to make frontend functionality work.
-- Registration rules that RLS can't express (deadline, capacity) live in a `BEFORE INSERT` trigger. The server action's checks are only for friendly UI states; the DB is the authority.
+- Registration rules that RLS can't express (closing time, capacity) live in a `BEFORE INSERT` trigger (`enforce_registration_rules`). The server action's checks are only for friendly UI states; the DB is the authority.
+- **Registration closes at `coalesce(registration_deadline, start_at)`**, refused when `now() >= ` that instant (`20260831000001`). A deadline may be as late as `end_at` (CHECK `events_deadline_before_end`, replacing `events_deadline_before_start`), so an organiser can keep registration open while the event runs. Only inserts are guarded: existing registrations, tickets and cancellations are unaffected. `src/lib/event-timing.ts` mirrors the rule for display (`isRegistrationClosed`, `registrationClosesAt`, `isHappeningNow`); change it together with the trigger. Any test that registers students for an event that has already started must register first, then move `start_at`/`end_at` (see `door_checkin_roles.sql`).
 - QR ticket tokens live in `registration_tickets`, readable only by the registrant (not club managers, not super-admins). No API role can insert/update/delete them; the `issue_registration_ticket` trigger creates them. Tokens and `ticket_code` are immutable (BEFORE UPDATE triggers). `ticket_code` is a short, non-secret, manager-visible reference; the door check-in accepts only the token.
 - **Door check-in** changes only through `check_in_by_token`, `manual_check_in` and `undo_check_in` (SECURITY DEFINER). Every rule lives in one place, `check_in_gate`: manager of the event's club or super_admin, event published, window from 2 h before `start_at` to 1 h after the effective end (`end_at`, or `start_at + 4 h`, matching `EVENT_END_FALLBACK_HOURS`). `src/lib/check-in.ts` mirrors the offsets for display only; change both together. No API role can execute the gate.
 - The `event_registrations_guard_check_in` trigger refuses any change to `checked_in_at`/`checked_in_by`/`check_in_method` outside those RPCs, for every role including the owner. It also refuses registering as already checked in, and moving a registration to another event or person. The RPCs pass it by setting the transaction-local flag `sabha.check_in_rpc` while running as the function owner. The `users ON DELETE SET NULL` action on `checked_in_by` is exempt.
@@ -67,17 +68,20 @@ Sabha is a DTU-first society/event management web app.
 - Super-admin club management
 - Club-admin event create/edit/cancel, with banner upload (Supabase Storage)
 - Public event discovery (`/events`) and event detail pages (`/events/[slug]`)
-- Event registration (RSVP): DB trigger enforcing published status, deadline and capacity (row-locked), aggregate-only count RPC, `registerForEvent` server action, `RegisterCTA`
+- Event registration (RSVP): DB trigger enforcing published status, closing time and capacity (row-locked), aggregate-only count RPC, `registerForEvent` server action, `RegisterCTA`
 - QR tickets: `registration_tickets`, "My tickets" at `/tickets` (server-rendered SVG QR encoding only the token)
 - Admin navigation, friendly form errors, and the local-dev env guard
 - All event times parsed and shown in IST via `src/lib/ist.ts`; never format an event time without it
 
-**In review (branch `feat/door-checkin`):**
-- Door check-in: migration `20260830000001` (not yet on live), scan page at `/admin/clubs/[clubId]/events/[eventId]/scan` with these parts:
+- Door check-in (PR #11, migration `20260830000001`): scan page at `/admin/clubs/[clubId]/events/[eventId]/scan` with these parts:
   - camera scanner: native `BarcodeDetector`, or the self-hosted `barcode-detector` ponyfill
   - code entry, name search with manual check-in and undo
   - live counter
 - Links to it from the event pages, and "Checked in at …" on `/tickets`.
+- `next` 16.3.8 (PR #12)
+
+**In review (branch `feat/registration-closes-at-start`):**
+- Registration closes at `start_at` (or a later deadline up to `end_at`): migration `20260831000001`, "Registration closed" on the event page and `RegisterCTA`, deadline validated beside the field in the event form, and a "Happening now" section on `/events`.
 
 The deferrals on RSVP/registration, QR tickets and door check-in are all lifted (user's explicit instructions, 2026-10-08 and 2026-10-11).
 

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
 import { RegisterCTA, type RegisterCTAState } from "@/components/events/RegisterCTA";
 import { ButtonLink } from "@/components/ui/Button";
+import { isRegistrationClosed, registrationClosesAt } from "@/lib/event-timing";
 import { formatIstDateTime, formatIstTime, isSameIstDay } from "@/lib/ist";
 import { canManageClub, getViewerRoles } from "@/lib/roles";
 import { registerForEvent } from "./actions";
@@ -39,12 +40,13 @@ async function getEvent(slug: string) {
 
 // Computes the CTA's initial render state server-side so the page never
 // flashes "Register" before flipping to "Registered"/"Full"/etc. Only
-// "closed" (deadline passed) and "full" (capacity reached) are reachable
+// "closed" (registration closed) and "full" (capacity reached) are reachable
 // this way — getEvent only ever returns published events, so "cancelled"
 // isn't reachable from a page load; RegisterCTA still supports it for the
 // rare race where an event is cancelled between page load and the click.
 async function getInitialCTAState(event: {
   id: string;
+  start_at: string;
   registration_deadline: string | null;
   capacity: number | null;
 }): Promise<{
@@ -74,10 +76,7 @@ async function getInitialCTAState(event: {
     }
   }
 
-  if (
-    event.registration_deadline &&
-    new Date() > new Date(event.registration_deadline)
-  ) {
+  if (isRegistrationClosed(event, new Date())) {
     return { state: "closed", ticketCode: null, registrationId: null };
   }
 
@@ -165,6 +164,8 @@ export default async function EventPage({
     }
   }
 
+  const registrationClosed = isRegistrationClosed(event, new Date());
+
   // A multi-day event shows its end date too, not just the end time.
   const endLabel = isSameIstDay(event.start_at, event.end_at)
     ? formatIstTime(event.end_at)
@@ -218,16 +219,14 @@ export default async function EventPage({
             <dd className="mt-0.5 text-ink">{event.venue}</dd>
           </div>
         )}
-        {event.registration_deadline && (
-          <div>
-            <dt className="font-mono text-xs uppercase tracking-wide text-ink-soft">
-              Registration closes
-            </dt>
-            <dd className="mt-0.5 text-ink">
-              {formatIstDateTime(event.registration_deadline)}
-            </dd>
-          </div>
-        )}
+        <div>
+          <dt className="font-mono text-xs uppercase tracking-wide text-ink-soft">
+            {registrationClosed ? "Registration closed" : "Registration closes"}
+          </dt>
+          <dd className="mt-0.5 text-ink">
+            {formatIstDateTime(registrationClosesAt(event))}
+          </dd>
+        </div>
         {event.capacity != null && (
           <div>
             <dt className="font-mono text-xs uppercase tracking-wide text-ink-soft">
