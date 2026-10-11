@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Textarea } from "@/components/ui/Textarea";
+import { EVENT_END_FALLBACK_HOURS } from "@/lib/tickets";
 import type {
   EventFieldName,
   EventFormState,
@@ -167,7 +168,9 @@ export function EventForm({
             />
             <span className="text-xs text-ink-soft">
               Leave blank to close registration when the event starts. A later
-              deadline keeps it open while the event runs, up to the end time.
+              deadline keeps it open while the event runs, up to the end time
+              (or {EVENT_END_FALLBACK_HOURS} hours after the start if the end
+              time is the same as the start).
             </span>
           </label>
 

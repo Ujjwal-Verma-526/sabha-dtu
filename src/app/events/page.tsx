@@ -58,12 +58,13 @@ export default async function EventsPage({
 
   const upcomingQuery = publicFeed().gte("start_at", now.toISOString());
 
-  // Started and not over. end_at > now - fallback is a superset (an event
+  // Started and not over. end_at >= now - fallback is a superset (an event
   // with end_at = start_at counts as running for EVENT_END_FALLBACK_HOURS);
-  // isHappeningNow below applies the exact rule.
+  // isHappeningNow below applies the exact effective-end rule, the same one
+  // tickets and door check-in use.
   const happeningNowQuery = publicFeed()
     .lte("start_at", now.toISOString())
-    .gt(
+    .gte(
       "end_at",
       new Date(now.getTime() - EVENT_END_FALLBACK_HOURS * HOUR_MS).toISOString(),
     );

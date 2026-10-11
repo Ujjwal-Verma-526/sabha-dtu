@@ -9,7 +9,8 @@
 --
 -- The rule: registration closes at coalesce(registration_deadline, start_at),
 -- from that instant on (now() >= closes_at). A deadline may be as late as
--- end_at. Existing registrations are never touched.
+-- the effective end (end_at, or start_at + 4 h when end_at = start_at).
+-- Existing registrations are never touched.
 --
 -- Actors:  A, B, C, D, E = students, M = admin of the event's club,
 --          S = super_admin.
@@ -319,8 +320,12 @@ begin
                 and conrelid = 'public.events'::regclass));
   select pg_get_constraintdef(oid) into cons from pg_constraint
    where conname = 'events_deadline_before_end' and conrelid = 'public.events'::regclass;
-  perform pg_temp.ok('34 constraint: events_deadline_before_end exists, on registration_deadline <= end_at',
-    cons like '%registration_deadline%end_at%', coalesce(cons, 'missing'));
+  perform pg_temp.ok('34 constraint: events_deadline_before_end exists, on registration_deadline <= event_effective_end(start_at, end_at)',
+    cons like '%registration_deadline <= %event_effective_end(start_at, end_at)%'
+    and exists (select 1 from pg_depend d join pg_constraint c on c.oid = d.objid
+                 where c.conname = 'events_deadline_before_end' and c.conrelid = 'public.events'::regclass
+                   and d.refobjid = 'public.event_effective_end(timestamptz,timestamptz)'::regprocedure),
+    coalesce(cons, 'missing'));
   perform pg_temp.ok('35 constraint: it is validated for existing rows',
     (select convalidated from pg_constraint
       where conname = 'events_deadline_before_end' and conrelid = 'public.events'::regclass));
@@ -402,6 +407,123 @@ begin
     def ilike '%for update%');
   perform pg_temp.ok('46 wiring: the closing time is coalesce(deadline, start_at)',
     def ilike '%coalesce(target_event.registration_deadline, target_event.start_at)%', 'rule text changed');
+end $$;
+
+-- ------------------------------------------------ 8. effective end (end_at = start_at)
+-- end_at is NOT NULL and end_at >= start_at, so "no separate end time" means
+-- end_at = start_at. Such an event runs for 4 hours, for the deadline cap
+-- exactly as for tickets and door check-in.
+do $$
+declare
+  spec record;
+  eid uuid;
+begin
+  for spec in
+    select * from (values
+      ('noend_future',  interval '1 day',  null::interval),
+      ('noend_dl',      interval '-1 hour', interval '1 hour'),
+      ('noend_nodl',    interval '-1 hour', null::interval)
+    ) as s(name, start_offset, deadline_offset)
+  loop
+    insert into public.events
+      (club_id, title, slug, venue, start_at, end_at, registration_deadline, status, created_by)
+    values ('00000000-0000-0000-00ca-0000000000c1', 'RC ' || spec.name,
+            'rc-' || replace(spec.name, '_', '-'), 'Hall',
+            now() + spec.start_offset, now() + spec.start_offset,
+            now() + spec.deadline_offset, 'published', pg_temp.uid('M'))
+    returning id into eid;
+    insert into t_ctx values ('ev_' || spec.name, eid::text);
+  end loop;
+end $$;
+
+do $$
+declare
+  old_tz text := current_setting('timezone');
+  t0 timestamptz := '2026-11-01 05:30:00+00';  -- 01:30 EDT, 30 min before New York's DST change
+  in_utc timestamptz;
+  in_ny timestamptz;
+  fn record;
+begin
+  perform pg_temp.ok('47 effective end: end_at when it is after start_at',
+    public.event_effective_end(t0, t0 + interval '90 minutes') = t0 + interval '90 minutes');
+  perform pg_temp.ok('48 effective end: start_at + 4 h when end_at = start_at',
+    public.event_effective_end(t0, t0) = '2026-11-01 09:30:00+00'::timestamptz);
+
+  perform set_config('timezone', 'UTC', true);
+  in_utc := public.event_effective_end(t0, t0);
+  perform set_config('timezone', 'America/New_York', true);
+  in_ny := public.event_effective_end(t0, t0);
+  perform set_config('timezone', old_tz, true);
+  perform pg_temp.ok('49 effective end: same instant whatever the session time zone (across a DST change)',
+    in_utc = in_ny and extract(epoch from in_ny - t0) = 4 * 3600, in_utc || ' vs ' || in_ny);
+
+  select p.provolatile, p.prosecdef, p.proconfig into fn
+    from pg_proc p where p.oid = 'public.event_effective_end(timestamptz,timestamptz)'::regprocedure;
+  perform pg_temp.ok('50 effective end: immutable, invoker, pinned search_path',
+    fn.provolatile = 'i' and not fn.prosecdef and fn.proconfig @> array['search_path=""'],
+    fn.provolatile::text || ' ' || fn.prosecdef::text || ' ' || coalesce(fn.proconfig::text, 'no config'));
+  perform pg_temp.ok('51 effective end: authenticated can execute it (the CHECK runs as the writer), anon cannot',
+    has_function_privilege('authenticated', 'public.event_effective_end(timestamptz,timestamptz)', 'execute')
+    and not has_function_privilege('anon', 'public.event_effective_end(timestamptz,timestamptz)', 'execute'));
+end $$;
+
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', pg_temp.uid('M'), 'role', 'authenticated')::text, true);
+do $$
+declare n int;
+begin
+  update public.events set registration_deadline = start_at + interval '4 hours'
+   where id = pg_temp.ev('noend_future');
+  get diagnostics n = row_count;
+  perform pg_temp.ok('52 effective end: no end time, a manager can set the deadline to start + 4 h', n = 1, n || ' rows');
+
+  begin
+    update public.events set registration_deadline = start_at + interval '4 hours 1 second'
+     where id = pg_temp.ev('noend_future');
+    perform pg_temp.ok('53 effective end: no end time, a deadline past start + 4 h is refused', false, 'update succeeded');
+  exception when check_violation then
+    perform pg_temp.ok('53 effective end: no end time, a deadline past start + 4 h is refused',
+      sqlerrm like '%events_deadline_before_end%', sqlerrm);
+  end;
+
+  -- Giving the event a real end time moves the cap to that end time.
+  begin
+    update public.events set end_at = start_at + interval '1 hour'
+     where id = pg_temp.ev('noend_future');
+    perform pg_temp.ok('54 effective end: adding an end before the existing deadline is refused', false, 'update succeeded');
+  exception when check_violation then
+    perform pg_temp.ok('54 effective end: adding an end before the existing deadline is refused', true, sqlerrm);
+  end;
+end $$;
+
+do $$
+begin
+  perform pg_temp.ok('55 effective end: no end time, started, deadline ahead: a student can still register',
+    pg_temp.try_register('noend_dl', 'E') = 'ok', pg_temp.try_register('noend_dl', 'E'));
+  perform pg_temp.ok('56 effective end: no end time, started, no deadline: registration is closed',
+    pg_temp.try_register('noend_nodl', 'E') = 'registration is closed', pg_temp.try_register('noend_nodl', 'E'));
+end $$;
+reset role;
+
+do $$
+declare def text;
+begin
+  select pg_get_functiondef('public.check_in_gate(uuid,uuid)'::regprocedure) into def;
+  perform pg_temp.ok('57 one rule: check_in_gate takes its effective end from event_effective_end',
+    def like '%public.event_effective_end(v_event.start_at, v_event.end_at)%'
+    and def not like '%interval ''4 hours''%', 'inline copy still present or call missing');
+  perform pg_temp.ok('58 one rule: check_in_gate is still not executable by any API role',
+    not has_function_privilege('anon', 'public.check_in_gate(uuid,uuid)', 'execute')
+    and not has_function_privilege('authenticated', 'public.check_in_gate(uuid,uuid)', 'execute'));
+  perform pg_temp.ok('59 one rule: no other function in public inlines the 4-hour fallback',
+    not exists (select 1 from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+                 where ns.nspname = 'public'
+                   and p.oid <> 'public.event_effective_end(timestamptz,timestamptz)'::regprocedure
+                   and p.prosrc like '%interval ''4 hours''%'),
+    (select string_agg(p.proname, ', ') from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+      where ns.nspname = 'public'
+        and p.oid <> 'public.event_effective_end(timestamptz,timestamptz)'::regprocedure
+        and p.prosrc like '%interval ''4 hours''%'));
 end $$;
 
 -- ---------------------------------------------------------------- report

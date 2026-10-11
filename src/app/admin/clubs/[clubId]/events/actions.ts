@@ -15,6 +15,7 @@ import {
 import type { EventFormState, EventFormValues } from "@/lib/event-form";
 import { parseIstDateTimeLocal } from "@/lib/ist";
 import { createClient } from "@/lib/supabase/server";
+import { EVENT_END_FALLBACK_HOURS, effectiveEventEnd } from "@/lib/tickets";
 import { slugify } from "@/lib/utils";
 
 async function requireUser() {
@@ -55,8 +56,15 @@ async function requireClubManager(clubId: string) {
   return { supabase, user };
 }
 
-const DEADLINE_AFTER_END_MESSAGE =
-  "Registration deadline must be on or before the end time.";
+// The deadline may be as late as the event's effective end: end_at, or
+// start + EVENT_END_FALLBACK_HOURS when end_at isn't after start_at. Same
+// rule as the events_deadline_before_end CHECK (via event_effective_end).
+function deadlineAfterEndMessage(start: Date | null, end: Date | null): string {
+  if (start && end && end.getTime() <= start.getTime()) {
+    return `This event has no separate end time, so the registration deadline must be within ${EVENT_END_FALLBACK_HOURS} hours of the start.`;
+  }
+  return "Registration deadline must be on or before the end time.";
+}
 
 type EventInput = {
   title: string;
@@ -121,8 +129,8 @@ function parseEventForm(
     const deadline = parseIstDateTimeLocal(values.registration_deadline);
     if (!deadline) {
       fieldErrors.registration_deadline = "Registration deadline is invalid.";
-    } else if (end && deadline > end) {
-      fieldErrors.registration_deadline = DEADLINE_AFTER_END_MESSAGE;
+    } else if (start && end && deadline > effectiveEventEnd(start, end)) {
+      fieldErrors.registration_deadline = deadlineAfterEndMessage(start, end);
     } else {
       registrationDeadline = deadline.toISOString();
     }
@@ -176,7 +184,10 @@ function mapEventDbError(
     }
     if (error.message.includes("events_deadline_before_end")) {
       return eventFormError(values, {
-        registration_deadline: DEADLINE_AFTER_END_MESSAGE,
+        registration_deadline: deadlineAfterEndMessage(
+          parseIstDateTimeLocal(values.start_at),
+          parseIstDateTimeLocal(values.end_at),
+        ),
       });
     }
     if (error.message.includes("events_capacity_positive")) {

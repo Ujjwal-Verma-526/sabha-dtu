@@ -1,8 +1,8 @@
 import { effectiveEventEnd } from "@/lib/tickets";
 
 // Registration closes at the event's start_at, unless the organiser set a
-// later registration_deadline (which may be as late as end_at). The DATABASE
-// decides: enforce_registration_rules in
+// later registration_deadline (which may be as late as the effective end).
+// The DATABASE decides: enforce_registration_rules in
 // supabase/migrations/20260831000001_registration_closes_at_start.sql refuses
 // the insert from this instant on. This mirrors it so the UI can show the
 // right state up front. Change both together.
@@ -22,8 +22,9 @@ export function isRegistrationClosed(event: RegistrationTiming, now: Date): bool
 }
 
 /**
- * Started and not yet over. "Over" uses the same effective end as tickets and
- * door check-in: end_at, or start + 4 h when end_at isn't after start_at.
+ * Started and not yet over, using the same effective end as tickets and
+ * door check-in (effectiveEventEnd). The boundaries match getTicketState:
+ * an event is over only once now is past the effective end.
  */
 export function isHappeningNow(
   event: { start_at: string; end_at: string },
@@ -31,6 +32,6 @@ export function isHappeningNow(
 ): boolean {
   return (
     new Date(event.start_at).getTime() <= now.getTime() &&
-    now.getTime() < effectiveEventEnd(event.start_at, event.end_at).getTime()
+    now.getTime() <= effectiveEventEnd(event.start_at, event.end_at).getTime()
   );
 }

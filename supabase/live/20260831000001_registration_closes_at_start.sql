@@ -2,18 +2,23 @@
 -- It is supabase/migrations/20260831000001_registration_closes_at_start.sql
 -- wrapped in one transaction: if any statement fails, nothing is applied.
 --
--- Requires 20260828000001_event_registration_guards (already on live). It does
--- NOT depend on the door check-in migration, so the two can go in either order.
--- Running it a second time stops at the precondition check with
--- "20260831000001_registration_closes_at_start is already applied" and
--- changes nothing.
+-- Order:
+--   1. supabase/tests/precheck_registration_closes_at_start_live.sql
+--      (read-only; its summary row must say ok = true)
+--   2. this file
+--   3. supabase/tests/verify_registration_closes_at_start_live.sql
+--      (read-only; every row ok = true)
 --
--- What it changes: registration now closes at start_at unless a later
--- registration_deadline (up to end_at) is set. Existing registrations are
--- not touched.
+-- Requires 20260828000001_event_registration_guards and
+-- 20260830000001_door_checkin (this migration rewrites check_in_gate to use
+-- the new event_effective_end function). The checks below stop with a clear
+-- message, before anything changes, if either is missing, if this migration
+-- is already applied, or if any event has a registration_deadline after its
+-- effective end (the new CHECK would reject those rows).
 --
--- Afterwards, run supabase/tests/verify_registration_closes_at_start_live.sql
--- (read-only). Every row should say ok = true.
+-- What it changes: registration closes at start_at unless a later
+-- registration_deadline (up to the effective end) is set. Existing
+-- registrations are not touched.
 
 begin;
 
@@ -22,22 +27,53 @@ begin;
 -- ---------------------------------------------------------------------
 
 do $$
+declare
+  v_count integer;
+  v_examples text;
 begin
+  if to_regprocedure('public.event_effective_end(timestamptz,timestamptz)') is not null
+     or exists (
+       select 1 from pg_constraint
+       where conrelid = 'public.events'::regclass
+         and conname = 'events_deadline_before_end'
+     ) then
+    raise exception '20260831000001_registration_closes_at_start is already applied (event_effective_end or events_deadline_before_end exists)';
+  end if;
+
   if to_regprocedure('public.enforce_registration_rules()') is null
      or not exists (
        select 1 from pg_constraint
        where conrelid = 'public.events'::regclass
-         and conname in ('events_deadline_before_start', 'events_deadline_before_end')
+         and conname = 'events_deadline_before_start'
      ) then
     raise exception 'apply 20260828000001_event_registration_guards first';
   end if;
 
-  if exists (
-    select 1 from pg_constraint
-    where conrelid = 'public.events'::regclass
-      and conname = 'events_deadline_before_end'
-  ) then
-    raise exception '20260831000001_registration_closes_at_start is already applied (events_deadline_before_end exists)';
+  if to_regprocedure('public.check_in_gate(uuid,uuid)') is null then
+    raise exception 'apply 20260830000001_door_checkin first (supabase/live/20260830000001_door_checkin.sql)';
+  end if;
+
+  -- Same rule as event_effective_end below, written out because the
+  -- function doesn't exist yet.
+  select count(*),
+         string_agg(title || ' (' || id || ')', ', ' order by start_at)
+           filter (where rn <= 5)
+    into v_count, v_examples
+  from (
+    select e.id, e.title, e.start_at,
+           row_number() over (order by e.start_at) as rn
+    from public.events e
+    where e.registration_deadline is not null
+      and e.registration_deadline > case when e.end_at > e.start_at then e.end_at
+                                         else e.start_at + interval '4 hours' end
+  ) v;
+
+  if v_count > 0 then
+    if v_count > 5 then
+      v_examples := v_examples || ', and ' || (v_count - 5) || ' more';
+    end if;
+    raise exception '% event(s) have a registration_deadline after their effective end, which the new CHECK would reject: %. Nothing was changed. Run supabase/tests/precheck_registration_closes_at_start_live.sql for the full list, fix those events, then paste this file again.',
+      v_count, v_examples;
   end if;
 end;
 $$;
@@ -50,38 +86,141 @@ $$;
 -- Now:
 --   - closes_at = coalesce(registration_deadline, start_at)
 --   - registration is refused from closes_at onward (now() >= closes_at)
---   - a deadline may sit anywhere up to end_at, so an organiser can keep
---     registration open for walk-ins after the event has started
+--   - a deadline may sit anywhere up to the event's effective end, so an
+--     organiser can keep registration open for walk-ins after the event
+--     has started
+--
+-- The effective end (end_at, or start_at + 4 hours when end_at isn't after
+-- start_at) now lives in one SQL function, event_effective_end, used by the
+-- deadline CHECK and by check_in_gate.
+--
+-- Requires 20260830000001_door_checkin (check_in_gate is rewritten to call
+-- the new function; its rules don't change).
 --
 -- Existing registrations are untouched: the guard is a BEFORE INSERT
--- trigger, so it only ever looks at new registrations. No policy or grant
--- changes.
+-- trigger, so it only ever looks at new registrations. No policy changes.
 
 -- ---------------------------------------------------------------------
--- 1. Deadline may be as late as end_at
+-- 1. event_effective_end: the one place the effective-end rule lives
+-- ---------------------------------------------------------------------
+--
+-- end_at is NOT NULL and events_end_after_start guarantees end_at >=
+-- start_at, so "end_at isn't after start_at" means end_at = start_at: the
+-- organiser gave no separate end time. Such an event counts as running for
+-- 4 hours. Mirrors EVENT_END_FALLBACK_HOURS / effectiveEventEnd in
+-- src/lib/tickets.ts. Change them together.
+--
+-- Immutable: adding an hours-only interval to a timestamptz doesn't depend
+-- on the session time zone (only day and month units do). Executable by
+-- authenticated because the events CHECK below runs it as the user who
+-- writes the event; nothing else needs it.
+
+create function public.event_effective_end(p_start_at timestamptz, p_end_at timestamptz)
+returns timestamptz
+language sql
+immutable
+parallel safe
+set search_path = ''
+as $$
+  select case
+    when p_end_at > p_start_at then p_end_at
+    else p_start_at + interval '4 hours'
+  end;
+$$;
+
+revoke execute on function public.event_effective_end(timestamptz, timestamptz) from public, anon;
+grant execute on function public.event_effective_end(timestamptz, timestamptz) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 2. check_in_gate uses it
+-- ---------------------------------------------------------------------
+--
+-- Same body as 20260830000001 except the effective end now comes from
+-- event_effective_end instead of an inline copy of the rule. create or
+-- replace keeps the owner and the revoked EXECUTE; the revoke is repeated
+-- so this file states it too.
+
+create or replace function public.check_in_gate(p_event_id uuid, p_uid uuid)
+returns text
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  v_event record;
+  v_effective_end timestamptz;
+begin
+  if p_uid is null then
+    return 'not_authorized';
+  end if;
+
+  select e.club_id, e.status, e.start_at, e.end_at
+    into v_event
+  from public.events e
+  where e.id = p_event_id;
+
+  if not found then
+    return 'not_authorized';
+  end if;
+
+  if not (public.is_club_manager(p_uid, v_event.club_id)
+          or public.is_super_admin(p_uid)) then
+    return 'not_authorized';
+  end if;
+
+  if v_event.status = 'cancelled' then
+    return 'event_cancelled';
+  end if;
+
+  if v_event.status = 'draft' then
+    return 'event_not_published';
+  end if;
+
+  v_effective_end := public.event_effective_end(v_event.start_at, v_event.end_at);
+
+  if v_event.status = 'completed'
+     or now() > v_effective_end + interval '1 hour' then
+    return 'event_ended';
+  end if;
+
+  if now() < v_event.start_at - interval '2 hours' then
+    return 'too_early';
+  end if;
+
+  return null;
+end;
+$$;
+
+revoke execute on function public.check_in_gate(uuid, uuid) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 3. Deadline may be as late as the effective end
 -- ---------------------------------------------------------------------
 --
 -- The old constraint (events_deadline_before_start, 20260825000001) capped
 -- the deadline at start_at. Every existing row has deadline <= start_at <=
--- end_at, so the new constraint holds for all of them.
+-- effective end, so the new constraint holds for all of them. (The live
+-- paste file checks this first and stops with a clear message if not.)
 
 alter table public.events
   drop constraint events_deadline_before_start;
 
 alter table public.events
   add constraint events_deadline_before_end check (
-    registration_deadline is null or registration_deadline <= end_at
+    registration_deadline is null
+    or registration_deadline <= public.event_effective_end(start_at, end_at)
   );
 
 -- ---------------------------------------------------------------------
--- 2. The registration guard
+-- 4. The registration guard
 -- ---------------------------------------------------------------------
 --
 -- Replaces the body from 20260828000001; the trigger
 -- event_registrations_enforce_rules already points at this function name,
 -- and create or replace keeps its owner, security definer setting and
 -- grants. Still takes the row lock on the event, so the capacity check
--- stays race-proof.
+-- stays race-proof. It never needs the end time: the CHECK above already
+-- keeps the deadline within the event.
 --
 -- The deadline check now reads "registration is closed" for both an
 -- explicit deadline and the start-time default; the app maps that message.
