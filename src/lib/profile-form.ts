@@ -1,13 +1,24 @@
 /**
  * Shapes and rules shared by the /profile form and the updateProfile server
- * action. The limits live here, once, so the inputs' attributes and the
- * server-side checks can't drift apart.
+ * action, so the inputs' attributes and the server-side checks can't drift
+ * apart.
+ *
+ * The database is the source of truth for every limit here: these mirror its
+ * CHECK constraints so the form can explain a problem beside the field
+ * instead of failing with a generic error. Change both together.
  */
 
-/** Matches the users_batch_year_range CHECK constraint (2000..2100). */
+/** Mirrors users_batch_year_range in supabase/migrations/20260825000001_schema.sql. */
 export const BATCH_YEAR_MIN = 2000;
 export const BATCH_YEAR_MAX = 2100;
 
+/**
+ * Mirrors users_name_length, users_roll_number_length, users_branch_length and
+ * users_avatar_url_length in
+ * supabase/migrations/20260901000001_profile_field_checks.sql. The database
+ * counts characters; .length counts UTF-16 units, which is never fewer, so
+ * anything that passes here passes there.
+ */
 export const PROFILE_MAX_LENGTH = {
   name: 100,
   roll_number: 30,
@@ -58,8 +69,22 @@ export function readProfileValues(formData: FormData): ProfileFormValues {
   };
 }
 
-/** Only web links: a stored `javascript:` or `data:` URL is an XSS vector the day it is rendered. */
+/**
+ * Mirrors users_avatar_url_web (`avatar_url ~* '^https?://'`) in
+ * supabase/migrations/20260901000001_profile_field_checks.sql.
+ */
+const WEB_URL_PREFIX = /^https?:\/\//i;
+
+/**
+ * Only web links: a stored `javascript:` or `data:` URL is an XSS vector the
+ * day it is rendered. The prefix test matches the database exactly; the URL
+ * parser alone also accepts forms the database refuses (`https:example.com`,
+ * a tab inside the scheme), which would surface as a generic error.
+ */
 function isWebUrl(value: string): boolean {
+  if (!WEB_URL_PREFIX.test(value)) {
+    return false;
+  }
   try {
     const { protocol } = new URL(value);
     return protocol === "https:" || protocol === "http:";
@@ -75,6 +100,7 @@ export type ProfileValidation =
 export function validateProfile(values: ProfileFormValues): ProfileValidation {
   const fieldErrors: ProfileFormState["fieldErrors"] = {};
 
+  // Mirrors users_name_not_blank (values are already trimmed).
   if (!values.name) {
     fieldErrors.name = "Name is required.";
   }
