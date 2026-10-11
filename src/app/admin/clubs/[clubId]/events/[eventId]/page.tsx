@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ActionForm } from "@/components/ui/ActionForm";
+import { ButtonLink } from "@/components/ui/Button";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { EventForm } from "@/components/events/EventForm";
@@ -97,6 +98,15 @@ export default async function EditEventPage({
         )}
         {(event.status === "draft" || event.status === "published") && (
           <CancelEventButton cancelAction={cancel} />
+        )}
+        {event.status === "published" && (
+          <ButtonLink
+            href={`/admin/clubs/${clubId}/events/${eventId}/scan`}
+            variant="primary"
+            className="text-sm"
+          >
+            Scan tickets
+          </ButtonLink>
         )}
         {event.status === "published" && (
           <a
