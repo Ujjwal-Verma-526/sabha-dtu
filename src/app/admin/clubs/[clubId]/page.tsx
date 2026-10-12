@@ -2,10 +2,9 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
 import { ButtonLink } from "@/components/ui/Button";
 import { ActionForm } from "@/components/ui/ActionForm";
+import { ClubDetailsForm } from "@/components/clubs/ClubDetailsForm";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { formatIstDate } from "@/lib/ist";
 import {
@@ -126,38 +125,15 @@ export default async function AdminClubPage({
 
       <Card className="mt-6">
         <p className="text-sm font-medium text-ink">Club details</p>
-        <ActionForm action={updateWithId} className="mt-4 flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Category</span>
-            <Input name="category" defaultValue={club.category ?? ""} />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Description</span>
-            <Textarea
-              name="description"
-              rows={4}
-              defaultValue={club.description ?? ""}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Logo URL</span>
-            <Input name="logo_url" defaultValue={club.logo_url ?? ""} />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Instagram handle</span>
-            <Input
-              name="instagram_handle"
-              defaultValue={club.instagram_handle ?? ""}
-            />
-          </label>
-
-          <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
-            Save changes
-          </SubmitButton>
-        </ActionForm>
+        <ClubDetailsForm
+          action={updateWithId}
+          initialValues={{
+            category: club.category ?? "",
+            description: club.description ?? "",
+            logo_url: club.logo_url ?? "",
+            instagram_handle: club.instagram_handle ?? "",
+          }}
+        />
       </Card>
 
       <section className="mt-8">

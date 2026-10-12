@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ClubCard } from "@/components/clubs/ClubCard";
+import { toIlikeSearchTerm } from "@/lib/search";
 import { cn } from "@/lib/utils";
 
 export const metadata = {
@@ -11,9 +12,12 @@ export const metadata = {
 export default async function ClubsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string }>;
+  searchParams: Promise<{ q?: string | string[]; category?: string | string[] }>;
 }) {
-  const { q, category } = await searchParams;
+  // A repeated parameter (?q=a&q=b) arrives as an array; use the first.
+  const raw = await searchParams;
+  const q = [raw.q].flat()[0];
+  const category = [raw.category].flat()[0];
 
   const supabase = await createClient();
 
@@ -25,8 +29,10 @@ export default async function ClubsPage({
     .eq("verified", true)
     .order("name");
 
-  if (q) {
-    query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
+  // q goes inside PostgREST's or=(...) syntax, so it is neutralised first.
+  const term = q ? toIlikeSearchTerm(q) : null;
+  if (term) {
+    query = query.or(`name.ilike.%${term}%,description.ilike.%${term}%`);
   }
   if (category) {
     query = query.eq("category", category);

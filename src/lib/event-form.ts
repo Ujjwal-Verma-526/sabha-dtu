@@ -12,7 +12,7 @@ export type EventFormValues = {
   banner_url: string;
 };
 
-export type EventFieldName = Exclude<keyof EventFormValues, "banner_url">;
+export type EventFieldName = keyof EventFormValues;
 
 export type EventFormState = {
   /** Form-level error not tied to one field. */

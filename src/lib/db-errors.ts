@@ -36,6 +36,40 @@ export function isForeignKeyViolation(error: DbError): boolean {
 }
 
 /**
+ * Messages raised by guard_club_member_admin_changes in
+ * supabase/migrations/20260902000001_security_hardening.sql, matched by a
+ * phrase from each. Change both together.
+ */
+const MEMBERSHIP_GUARD_MESSAGES: Array<[phrase: string, friendly: string]> = [
+  [
+    "only a club admin or a super admin",
+    "Only a club admin can add, change or remove a club admin.",
+  ],
+  [
+    "must keep at least one approved admin",
+    "A club needs at least one admin. Make someone else an admin first.",
+  ],
+  [
+    "can't be moved to another club or person",
+    "A membership can't be moved to another club or person.",
+  ],
+];
+
+/**
+ * friendlyDbError for writes to club_members: the membership guard trigger's
+ * refusals get their own wording, everything else the generic one.
+ */
+export function friendlyMembershipError(error: DbError, action: string): string {
+  if (isRaisedException(error)) {
+    const match = MEMBERSHIP_GUARD_MESSAGES.find(([phrase]) =>
+      error.message.includes(phrase),
+    );
+    if (match) return match[1];
+  }
+  return friendlyDbError(error, action);
+}
+
+/**
  * Generic user-facing message for a database error the caller has no specific
  * wording for. The real error is logged server-side, never shown.
  */

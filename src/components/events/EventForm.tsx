@@ -83,6 +83,7 @@ export function EventForm({
               clubId={clubId}
               defaultValue={values.banner_url || null}
             />
+            <FieldError name="banner_url" message={fieldErrors.banner_url} />
           </div>
 
           <label className="flex flex-col gap-1 text-sm">

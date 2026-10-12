@@ -4,13 +4,20 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   actionError,
-  actionSuccess,
   idleState,
   type ActionState,
 } from "@/lib/action-state";
 import {
+  clubCheckFieldErrors,
+  instagramHandleError,
+  readClubDetailsValues,
+  validateClubDetails,
+  type ClubDetailsState,
+} from "@/lib/club-form";
+import {
   NOT_ALLOWED_MESSAGE,
   friendlyDbError,
+  friendlyMembershipError,
   isForeignKeyViolation,
   isRaisedException,
   isUniqueViolation,
@@ -41,7 +48,7 @@ export type CreateClubValues = {
 export type CreateClubState = {
   /** Form-level error not tied to one field. */
   error: string | null;
-  fieldErrors: { name?: string; admin_user_id?: string };
+  fieldErrors: { name?: string; instagram_handle?: string; admin_user_id?: string };
   values: CreateClubValues;
 };
 
@@ -82,6 +89,10 @@ export async function createClub(
   if (!slug) {
     return failWith({ name: "Name needs at least one letter or number." });
   }
+  const handleError = instagramHandleError(values.instagram_handle);
+  if (handleError) {
+    return failWith({ instagram_handle: handleError });
+  }
   if (values.admin_user_id && !UUID_PATTERN.test(values.admin_user_id)) {
     return failWith({
       admin_user_id: "That doesn't look like a valid user ID.",
@@ -113,6 +124,11 @@ export async function createClub(
     if (isForeignKeyViolation(error)) {
       return failWith({ admin_user_id: "No user with that ID exists." });
     }
+    // The CHECK backs up instagramHandleError above.
+    const checkErrors = clubCheckFieldErrors(error.message, "");
+    if (checkErrors?.instagram_handle) {
+      return failWith({ instagram_handle: checkErrors.instagram_handle });
+    }
     return failWith({}, friendlyDbError(error, "creating a club"));
   }
 
@@ -122,35 +138,46 @@ export async function createClub(
 
 // Whitelisted fields only — never slug, verified, created_by, or id.
 // RLS (clubs_update_manager_or_super_admin + the protected-field trigger)
-// is the real backstop; this whitelist just keeps the form honest.
+// is the real backstop; this whitelist just keeps the form honest. The
+// handle and logo CHECKs (see src/lib/club-form.ts) back up the validation.
 export async function updateClub(
   clubId: string,
-  _previousState: ActionState,
+  _previousState: ClubDetailsState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<ClubDetailsState> {
   const { supabase } = await requireUser();
+
+  const values = readClubDetailsValues(formData);
+  const failWith = (
+    fieldErrors: ClubDetailsState["fieldErrors"],
+    error: string | null = null,
+  ): ClubDetailsState => ({ error, fieldErrors, values, saved: false });
+
+  const validation = validateClubDetails(values);
+  if (!validation.ok) {
+    return failWith(validation.fieldErrors);
+  }
 
   const { data, error } = await supabase
     .from("clubs")
-    .update({
-      description: readText(formData, "description") || null,
-      logo_url: readText(formData, "logo_url") || null,
-      category: readText(formData, "category") || null,
-      instagram_handle: readText(formData, "instagram_handle") || null,
-    })
+    .update(validation.update)
     .eq("id", clubId)
     .select("id");
 
   if (error) {
-    return actionError(friendlyDbError(error, "updating a club"));
+    const checkErrors = clubCheckFieldErrors(error.message, values.logo_url);
+    if (checkErrors) {
+      return failWith(checkErrors);
+    }
+    return failWith({}, friendlyDbError(error, "updating a club"));
   }
   if (data.length === 0) {
-    return actionError(NOT_ALLOWED_MESSAGE);
+    return failWith({}, NOT_ALLOWED_MESSAGE);
   }
 
   revalidatePath(`/admin/clubs/${clubId}`);
   revalidatePath("/clubs");
-  return actionSuccess("Changes saved.");
+  return { error: null, fieldErrors: {}, values, saved: true };
 }
 
 // Only a super_admin's UPDATE actually changes `verified` — the
@@ -203,7 +230,9 @@ async function setMembershipStatus(
     .select("id");
 
   if (error) {
-    return actionError(friendlyDbError(error, `marking a membership ${status}`));
+    return actionError(
+      friendlyMembershipError(error, `marking a membership ${status}`),
+    );
   }
   if (data.length === 0) {
     return actionError(NOT_ALLOWED_MESSAGE);
