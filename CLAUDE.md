@@ -67,7 +67,7 @@ Known and accepted by the user (2026-10-12). Don't "fix" these without being ask
 - **Open sign-up.** Any email can sign up (no @dtu.ac.in lock), so throwaway accounts can register for events and take capacity seats. The branding stays DTU-first; the copy must not claim sign-up needs a DTU email.
 - **Managers can rename their club**, including a verified one. Only `slug`, `created_by` and `verified` are protected (`prevent_club_protected_field_changes`).
 - **Five dev-only npm "high" advisories** (`braces` → `micromatch` → `fast-glob` → `@next/eslint-plugin-next` → `eslint-config-next`). They only affect linting on developer machines; `npm audit --omit=dev` reports 0. The only fix offered, `npm audit fix --force`, downgrades `eslint-config-next` to 14.2.35, which breaks linting for this Next version. Don't run it.
-- **CSP `script-src` allows `'unsafe-inline'`** (Next.js inline RSC scripts). Safe while no user content is rendered as HTML. Revisit with nonces via `proxy.ts` if `dangerouslySetInnerHTML` or rich-text/markdown rendering is ever added.
+- **CSP `script-src` allows `'unsafe-inline'`** (Next.js inline RSC scripts). Safe while no user content is rendered as HTML (`TicketStub` uses `dangerouslySetInnerHTML` only for our own server-generated QR SVG). Revisit with nonces via `proxy.ts` if any user content is ever rendered as HTML, including rich-text or markdown.
 
 ## Working style
 
