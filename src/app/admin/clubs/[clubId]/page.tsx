@@ -71,7 +71,7 @@ export default async function AdminClubPage({
   const verifyOff = setClubVerified.bind(null, club.id, false);
 
   return (
-    <main className="mx-auto max-w-2xl flex-1 px-6 py-12">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-12">
       <Breadcrumbs
         items={[
           ...(isSuperAdmin ? [{ label: "Admin", href: "/admin/clubs" }] : []),
@@ -126,6 +126,8 @@ export default async function AdminClubPage({
       <Card className="mt-6">
         <p className="text-sm font-medium text-ink">Club details</p>
         <ClubDetailsForm
+          clubId={club.id}
+          clubName={club.name}
           action={updateWithId}
           initialValues={{
             category: club.category ?? "",
