@@ -9,21 +9,30 @@ import type {
   ClubDetailsState,
   ClubDetailsValues,
 } from "@/lib/club-form";
-import { IMAGE_URL_MAX_LENGTH } from "@/lib/storage-url";
+import { LogoUpload } from "@/components/clubs/LogoUpload";
 
 function FieldError({ name, message }: { name: string; message?: string }) {
   if (!message) return null;
   return (
-    <span id={`${name}-error`} role="alert" className="text-xs text-red-700">
+    <span
+      id={`${name}-error`}
+      role="alert"
+      // A long value in the message (a pasted URL) must wrap, not widen the card.
+      className="text-xs text-red-700 [overflow-wrap:anywhere]"
+    >
       {message}
     </span>
   );
 }
 
 export function ClubDetailsForm({
+  clubId,
+  clubName,
   action,
   initialValues,
 }: {
+  clubId: string;
+  clubName: string;
   /** updateClub with the club id already bound: (previousState, formData). */
   action: (
     previous: ClubDetailsState,
@@ -47,7 +56,7 @@ export function ClubDetailsForm({
   });
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-4">
+    <form action={formAction} className="mt-4 flex min-w-0 flex-col gap-4">
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-ink">Category</span>
         <Input name="category" defaultValue={values.category} />
@@ -62,20 +71,16 @@ export function ClubDetailsForm({
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink">Logo URL</span>
-        <Input
-          name="logo_url"
-          type="url"
-          maxLength={IMAGE_URL_MAX_LENGTH}
+      <div className="flex min-w-0 flex-col gap-1 text-sm">
+        <span className="font-medium text-ink">Logo</span>
+        <LogoUpload
+          clubId={clubId}
+          clubName={clubName}
           defaultValue={values.logo_url}
-          {...invalid("logo_url")}
+          invalid={Boolean(fieldErrors.logo_url)}
         />
         <FieldError name="logo_url" message={fieldErrors.logo_url} />
-        <span className="text-xs text-ink-soft">
-          A link to an image already stored in Sabha&apos;s storage.
-        </span>
-      </label>
+      </div>
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-ink">Instagram handle</span>

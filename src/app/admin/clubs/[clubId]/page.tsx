@@ -126,6 +126,8 @@ export default async function AdminClubPage({
       <Card className="mt-6">
         <p className="text-sm font-medium text-ink">Club details</p>
         <ClubDetailsForm
+          clubId={club.id}
+          clubName={club.name}
           action={updateWithId}
           initialValues={{
             category: club.category ?? "",

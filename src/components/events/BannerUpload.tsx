@@ -3,56 +3,14 @@
 import { useId, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Spinner } from "@/components/ui/Spinner";
+import {
+  IMAGE_BUCKET,
+  IMAGE_INPUT_ACCEPT,
+  compressImage,
+  imageFileProblem,
+} from "@/lib/image-upload";
 
 const MAX_DIMENSION = 1600;
-const JPEG_QUALITY = 0.85;
-const MAX_SOURCE_BYTES = 5 * 1024 * 1024; // must match the bucket's file_size_limit
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
-// Resizes/re-encodes to JPEG client-side via <canvas> before upload — no
-// image library needed for a "keep the first implementation simple" MVP,
-// and it keeps oversized phone-camera banners well under the bucket limit.
-function compressImage(file: File): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-
-    img.onload = () => {
-      const scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        URL.revokeObjectURL(objectUrl);
-        reject(new Error("Could not process image"));
-        return;
-      }
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      canvas.toBlob(
-        (blob) => {
-          URL.revokeObjectURL(objectUrl);
-          if (!blob) {
-            reject(new Error("Could not process image"));
-            return;
-          }
-          resolve(blob);
-        },
-        "image/jpeg",
-        JPEG_QUALITY,
-      );
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error("That file isn't a readable image"));
-    };
-
-    img.src = objectUrl;
-  });
-}
 
 export function BannerUpload({
   clubId,
@@ -75,14 +33,10 @@ export function BannerUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    const problem = imageFileProblem(file);
+    if (problem) {
       setStatus("error");
-      setError("Use a JPEG, PNG, or WebP image.");
-      return;
-    }
-    if (file.size > MAX_SOURCE_BYTES) {
-      setStatus("error");
-      setError("Image must be under 5 MB.");
+      setError(problem);
       return;
     }
 
@@ -90,18 +44,18 @@ export function BannerUpload({
     setError(null);
 
     try {
-      const compressed = await compressImage(file);
+      const compressed = await compressImage(file, MAX_DIMENSION);
       const path = `${clubId}/${crypto.randomUUID()}.jpg`;
 
       const supabase = createClient();
       const { error: uploadError } = await supabase.storage
-        .from("event-banners")
+        .from(IMAGE_BUCKET)
         .upload(path, compressed, { contentType: "image/jpeg" });
 
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage
-        .from("event-banners")
+        .from(IMAGE_BUCKET)
         .getPublicUrl(path);
 
       setBannerUrl(data.publicUrl);
@@ -142,7 +96,7 @@ export function BannerUpload({
       <input
         id={inputId}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={IMAGE_INPUT_ACCEPT}
         onChange={handleChange}
         disabled={status === "uploading"}
         className="sr-only"
