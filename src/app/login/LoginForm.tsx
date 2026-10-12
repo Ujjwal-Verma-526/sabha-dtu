@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -125,6 +126,17 @@ export function LoginForm({ next, initialError }: LoginFormProps) {
         {status === "sent" && error && (
           <p className="mt-3 text-sm text-red-600">{error}</p>
         )}
+        <p className="mt-6 text-center text-xs text-ink-soft">
+          By continuing you agree to the{" "}
+          <Link href="/terms" className="underline hover:text-ink">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline hover:text-ink">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </Card>
     </main>
   );

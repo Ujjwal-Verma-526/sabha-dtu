@@ -153,16 +153,6 @@ export default function Home() {
           </Card>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-10 text-sm text-ink-soft sm:flex-row sm:items-center sm:justify-between">
-          <span className="font-display font-semibold text-ink">Sabha</span>
-          <span className="font-mono text-xs">
-            Built for Delhi Technological University · MVP in progress
-          </span>
-        </div>
-      </footer>
     </main>
   );
 }
