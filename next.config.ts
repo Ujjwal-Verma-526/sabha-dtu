@@ -5,9 +5,76 @@ import {
   describeSupabaseUrlCheck,
 } from "./src/lib/supabase/dev-env-check";
 
-const nextConfig: NextConfig = {
-  /* config options here */
-};
+// Security headers for every route. The policy is static (no per-request
+// nonce), so script-src has to allow 'unsafe-inline' for the inline scripts
+// Next.js emits; see "Accepted limitations" in CLAUDE.md. Everything else is
+// tight: our own origin plus our own Supabase project, nothing else.
+function supabaseOrigins(): { http: string[]; socket: string[] } {
+  try {
+    const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+    const socketProtocol = url.protocol === "https:" ? "wss:" : "ws:";
+    return {
+      http: [url.origin],
+      socket: [`${socketProtocol}//${url.host}`],
+    };
+  } catch {
+    return { http: [], socket: [] };
+  }
+}
+
+function contentSecurityPolicy(isDev: boolean): string {
+  const supabase = supabaseOrigins();
+  const directives: Record<string, string[]> = {
+    "default-src": ["'self'"],
+    // 'wasm-unsafe-eval': the door scanner's QR fallback compiles a wasm
+    // module. 'unsafe-eval' is dev-only (React's debugging in `next dev`).
+    "script-src": [
+      "'self'",
+      "'unsafe-inline'",
+      "'wasm-unsafe-eval'",
+      ...(isDev ? ["'unsafe-eval'"] : []),
+    ],
+    "style-src": ["'self'", "'unsafe-inline'"],
+    // blob: and data: for the client-side image preview and canvas upload.
+    "img-src": ["'self'", "data:", "blob:", ...supabase.http],
+    "font-src": ["'self'"],
+    "media-src": ["'self'", "blob:"],
+    "connect-src": [
+      "'self'",
+      ...supabase.http,
+      ...supabase.socket,
+      ...(isDev ? ["ws://localhost:*", "ws://127.0.0.1:*"] : []),
+    ],
+    "frame-ancestors": ["'none'"],
+    "object-src": ["'none'"],
+    "base-uri": ["'self'"],
+    "form-action": ["'self'"],
+  };
+  return Object.entries(directives)
+    .map(([name, sources]) => `${name} ${sources.join(" ")}`)
+    .join("; ");
+}
+
+function securityHeaders(isDev: boolean) {
+  return [
+    { key: "Content-Security-Policy", value: contentSecurityPolicy(isDev) },
+    { key: "X-Content-Type-Options", value: "nosniff" },
+    { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+    // The camera is for the door scan page, on our own origin only.
+    {
+      key: "Permissions-Policy",
+      value: "camera=(self), microphone=(), geolocation=(), payment=()",
+    },
+  ];
+}
+
+function buildConfig(isDev: boolean): NextConfig {
+  return {
+    async headers() {
+      return [{ source: "/:path*", headers: securityHeaders(isDev) }];
+    },
+  };
+}
 
 // Runs when `next dev` starts, after Next has loaded the .env files: print
 // which Supabase project this dev server talks to, and shout if it isn't the
@@ -27,5 +94,5 @@ export default function config(phase: string): NextConfig {
   if (phase === PHASE_DEVELOPMENT_SERVER) {
     warnIfDevServerIsNotLocal();
   }
-  return nextConfig;
+  return buildConfig(phase === PHASE_DEVELOPMENT_SERVER);
 }
