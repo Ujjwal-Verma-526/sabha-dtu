@@ -85,8 +85,20 @@ export function NewClubForm() {
             <span className="font-medium text-ink">Instagram handle</span>
             <Input
               name="instagram_handle"
+              maxLength={31}
               placeholder="dtu_robotics"
               defaultValue={values.instagram_handle}
+              aria-invalid={Boolean(fieldErrors.instagram_handle)}
+              aria-describedby={
+                fieldErrors.instagram_handle ? "instagram-handle-error" : undefined
+              }
+              className={
+                fieldErrors.instagram_handle ? "border-red-400" : undefined
+              }
+            />
+            <FieldError
+              id="instagram-handle-error"
+              message={fieldErrors.instagram_handle}
             />
           </label>
 

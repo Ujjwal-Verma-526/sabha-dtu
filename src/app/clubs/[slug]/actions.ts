@@ -10,6 +10,7 @@ import {
 import {
   NOT_ALLOWED_MESSAGE,
   friendlyDbError,
+  friendlyMembershipError,
   isUniqueViolation,
 } from "@/lib/db-errors";
 import { createClient } from "@/lib/supabase/server";
@@ -61,7 +62,9 @@ export async function requestToJoin(
       .select("id");
 
     if (deleteError) {
-      return actionError(friendlyDbError(deleteError, "withdrawing a join request"));
+      return actionError(
+        friendlyMembershipError(deleteError, "withdrawing a join request"),
+      );
     }
     if (deleted.length === 0) {
       return actionError(NOT_ALLOWED_MESSAGE);
@@ -74,7 +77,9 @@ export async function requestToJoin(
 
   // unique(club_id, user_id): a double submit already created the request.
   if (insertError && !isUniqueViolation(insertError)) {
-    return actionError(friendlyDbError(insertError, "requesting to join a club"));
+    return actionError(
+      friendlyMembershipError(insertError, "requesting to join a club"),
+    );
   }
 
   // The page re-renders as "Request pending", which is the confirmation.

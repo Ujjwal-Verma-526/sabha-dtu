@@ -14,6 +14,7 @@ import {
 } from "@/lib/db-errors";
 import type { EventFormState, EventFormValues } from "@/lib/event-form";
 import { parseIstDateTimeLocal } from "@/lib/ist";
+import { imageUrlError, isOurStorageImageUrl } from "@/lib/storage-url";
 import { createClient } from "@/lib/supabase/server";
 import { EVENT_END_FALLBACK_HOURS, effectiveEventEnd } from "@/lib/tickets";
 import { slugify } from "@/lib/utils";
@@ -97,8 +98,9 @@ function readEventValues(formData: FormData): EventFormValues {
 // Shared shape/business-rule validation for create and update. The same
 // invariants are also enforced as CHECK constraints on public.events
 // (events_end_after_start, events_deadline_before_end,
-// events_capacity_positive) — this gives a friendly field error before
-// the database is involved, and mapEventDbError covers the rest.
+// events_capacity_positive, events_banner_url_*) — this gives a friendly
+// field error before the database is involved, and mapEventDbError covers
+// the rest.
 function parseEventForm(
   values: EventFormValues,
 ): { input: EventInput } | { fieldErrors: EventFormState["fieldErrors"] } {
@@ -134,6 +136,12 @@ function parseEventForm(
     } else {
       registrationDeadline = deadline.toISOString();
     }
+  }
+
+  // The uploader only ever produces our own storage URLs; this stops a
+  // hand-made POST from storing anything else. events_banner_url_* backs it.
+  if (values.banner_url && !isOurStorageImageUrl(values.banner_url)) {
+    fieldErrors.banner_url = imageUrlError(values.banner_url);
   }
 
   let capacity: number | null = null;
@@ -193,6 +201,11 @@ function mapEventDbError(
     if (error.message.includes("events_capacity_positive")) {
       return eventFormError(values, {
         capacity: "Capacity must be a positive whole number.",
+      });
+    }
+    if (error.message.includes("events_banner_url_")) {
+      return eventFormError(values, {
+        banner_url: imageUrlError(values.banner_url),
       });
     }
   }

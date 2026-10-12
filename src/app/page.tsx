@@ -17,12 +17,12 @@ const steps = [
   {
     n: "02",
     title: "It goes public",
-    body: "Live on Sabha immediately — anyone with a DTU login can find it.",
+    body: "Live on Sabha immediately — anyone can find it, no login needed.",
   },
   {
     n: "03",
     title: "Student registers",
-    body: "One tap, signed in with their @dtu.ac.in email. No forms to re-fill.",
+    body: "One tap once they're signed in. No forms to re-fill.",
   },
   {
     n: "04",
@@ -42,16 +42,15 @@ export default function Home() {
       {/* Hero */}
       <section className="mx-auto grid max-w-6xl gap-12 px-6 pt-16 pb-24 md:grid-cols-2 md:items-center md:pt-24">
         <div>
-          <Badge>DTU only · registrations open</Badge>
+          <Badge>DTU societies · registrations open</Badge>
           <h1 className="mt-6 font-display text-5xl font-bold leading-[1.05] tracking-tight text-ink sm:text-6xl">
             Every DTU event,
             <br />
             one QR ticket.
           </h1>
           <p className="mt-6 max-w-md text-lg text-ink-soft">
-            Sabha lists what DTU societies are actually running. Register
-            with your <span className="font-mono text-ink">@dtu.ac.in</span>{" "}
-            email, get a ticket, walk in when it scans clean at the gate.
+            Sabha lists what DTU societies are actually running. Sign in,
+            register, get a ticket, walk in when it scans clean at the gate.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <ButtonLink href="#how-it-works" variant="primary">
@@ -147,7 +146,7 @@ export default function Home() {
             </h3>
             <ul className="mt-4 space-y-3 text-sm text-ink-soft">
               <li>Every society&apos;s events, one place to check.</li>
-              <li>DTU-only means it&apos;s not full of dead listings.</li>
+              <li>Only real DTU societies, so it&apos;s not full of dead listings.</li>
               <li>Your ticket lives in your account — nothing to lose.</li>
               <li>Register once, walk in on a scan, no queue for names.</li>
             </ul>
