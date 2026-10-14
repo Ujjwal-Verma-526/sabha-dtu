@@ -3,10 +3,13 @@
 import { useActionState } from "react";
 import { BannerUpload } from "@/components/events/BannerUpload";
 import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Textarea } from "@/components/ui/Textarea";
+import { CATEGORY_KEYS, categoryLabel } from "@/lib/categories";
 import { EVENT_END_FALLBACK_HOURS } from "@/lib/tickets";
+import { cn } from "@/lib/utils";
 import type {
   EventFieldName,
   EventFormState,
@@ -97,6 +100,48 @@ export function EventForm({
             />
             <FieldError name="title" message={fieldErrors.title} />
           </label>
+
+          {/* Plain chips, not category colours: forms stay plain. Real radios,
+              so it works without JS and the browser enforces the choice. */}
+          <fieldset
+            role="radiogroup"
+            aria-labelledby="category-label"
+            aria-required="true"
+            aria-invalid={Boolean(fieldErrors.category)}
+            aria-describedby={fieldErrors.category ? "category-error" : undefined}
+            className="flex flex-col gap-1.5 text-sm"
+          >
+            <legend id="category-label" className="mb-1.5 font-medium text-ink">
+              Category
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORY_KEYS.map((key) => (
+                <label key={key} className="relative">
+                  <input
+                    type="radio"
+                    name="category"
+                    value={key}
+                    required
+                    defaultChecked={values.category === key}
+                    className="peer sr-only"
+                  />
+                  <span
+                    className={cn(
+                      "inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium text-ink transition-colors select-none",
+                      "hover:border-ink peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper",
+                      "peer-focus-visible:ring-3 peer-focus-visible:ring-primary/40",
+                      "[&>svg]:hidden peer-checked:[&>svg]:block",
+                      fieldErrors.category ? "border-danger" : "border-control",
+                    )}
+                  >
+                    <Icon name="check" strokeWidth={2.4} className="text-[15px]" />
+                    {categoryLabel(key)}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <FieldError name="category" message={fieldErrors.category} />
+          </fieldset>
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-ink">Description</span>

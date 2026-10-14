@@ -12,6 +12,7 @@ import {
   friendlyDbError,
   isUniqueViolation,
 } from "@/lib/db-errors";
+import { type CategoryKey, isCategoryKey } from "@/lib/categories";
 import type { EventFormState, EventFormValues } from "@/lib/event-form";
 import { parseIstDateTimeLocal } from "@/lib/ist";
 import { imageUrlError, isOurStorageImageUrl } from "@/lib/storage-url";
@@ -69,6 +70,7 @@ function deadlineAfterEndMessage(start: Date | null, end: Date | null): string {
 
 type EventInput = {
   title: string;
+  category: CategoryKey;
   description: string;
   bannerUrl: string | null;
   venue: string;
@@ -85,6 +87,7 @@ function readEventValues(formData: FormData): EventFormValues {
   };
   return {
     title: read("title"),
+    category: read("category"),
     description: read("description"),
     venue: read("venue"),
     start_at: read("start_at"),
@@ -97,7 +100,7 @@ function readEventValues(formData: FormData): EventFormValues {
 
 // Shared shape/business-rule validation for create and update. The same
 // invariants are also enforced as CHECK constraints on public.events
-// (events_end_after_start, events_deadline_before_end,
+// (events_category_valid, events_end_after_start, events_deadline_before_end,
 // events_capacity_positive, events_banner_url_*) — this gives a friendly
 // field error before the database is involved, and mapEventDbError covers
 // the rest.
@@ -107,6 +110,13 @@ function parseEventForm(
   const fieldErrors: EventFormState["fieldErrors"] = {};
 
   if (!values.title) fieldErrors.title = "Title is required.";
+  // The database default ('other') is only for older clients: the form
+  // always asks for an explicit choice.
+  if (!values.category) {
+    fieldErrors.category = "Pick a category.";
+  } else if (!isCategoryKey(values.category)) {
+    fieldErrors.category = "Pick one of the listed categories.";
+  }
   if (!values.description) fieldErrors.description = "Description is required.";
   if (!values.venue) fieldErrors.venue = "Venue is required.";
   if (!values.start_at) fieldErrors.start_at = "Start date/time is required.";
@@ -152,14 +162,21 @@ function parseEventForm(
     }
   }
 
-  // start/end are only null when a field error has already been set.
-  if (Object.keys(fieldErrors).length > 0 || !start || !end) {
+  // start/end are only null, and the category only invalid, when a field
+  // error has already been set.
+  if (
+    Object.keys(fieldErrors).length > 0 ||
+    !start ||
+    !end ||
+    !isCategoryKey(values.category)
+  ) {
     return { fieldErrors };
   }
 
   return {
     input: {
       title: values.title,
+      category: values.category,
       description: values.description,
       bannerUrl: values.banner_url || null,
       venue: values.venue,
@@ -187,6 +204,11 @@ function mapEventDbError(
   action: string,
 ): EventFormState {
   if (error.code === "23514") {
+    if (error.message.includes("events_category_valid")) {
+      return eventFormError(values, {
+        category: "Pick one of the listed categories.",
+      });
+    }
     if (error.message.includes("events_end_after_start")) {
       return eventFormError(values, { end_at: "End must be after start." });
     }
@@ -252,6 +274,7 @@ export async function createEvent(
       .insert({
         club_id: clubId,
         title: input.title,
+        category: input.category,
         slug,
         description: input.description,
         banner_url: input.bannerUrl,
@@ -305,6 +328,7 @@ export async function updateEvent(
     .from("events")
     .update({
       title: input.title,
+      category: input.category,
       description: input.description,
       banner_url: input.bannerUrl,
       venue: input.venue,

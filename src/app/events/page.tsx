@@ -6,7 +6,7 @@ import { EventRow, LiveBanner, type EventListData } from "@/components/events/Ev
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { fieldClass } from "@/components/ui/Input";
-import { categoryKey } from "@/lib/categories";
+import { CATEGORY_KEYS, categoryLabel, isCategoryKey } from "@/lib/categories";
 import { isHappeningNow } from "@/lib/event-timing";
 import {
   formatIstShortDate,
@@ -48,7 +48,10 @@ export default async function EventsPage({
 }: {
   searchParams: Promise<{ club?: string; category?: string; date?: string }>;
 }) {
-  const { club, category, date } = await searchParams;
+  const { club, category: rawCategory, date } = await searchParams;
+  // Only the five keys filter; anything else (an old club-category link)
+  // is ignored rather than matching nothing.
+  const category = isCategoryKey(rawCategory) ? rawCategory : undefined;
 
   const supabase = await createClient();
   const now = new Date();
@@ -62,7 +65,7 @@ export default async function EventsPage({
     let feed = supabase
       .from("events")
       .select(
-        "id, title, slug, banner_url, venue, start_at, end_at, capacity, club:clubs!inner(name, slug, verified, category)",
+        "id, title, slug, category, banner_url, venue, start_at, end_at, capacity, club:clubs!inner(name, slug, verified)",
       )
       .eq("status", "published")
       .eq("club.verified", true)
@@ -72,7 +75,7 @@ export default async function EventsPage({
       feed = feed.eq("club.slug", club);
     }
     if (category) {
-      feed = feed.eq("club.category", category);
+      feed = feed.eq("category", category);
     }
     if (date) {
       // The picked date is an IST calendar day, whatever the server's zone.
@@ -105,14 +108,10 @@ export default async function EventsPage({
       happeningNowQuery,
       supabase
         .from("clubs")
-        .select("slug, name, category")
+        .select("slug, name")
         .eq("verified", true)
         .order("name"),
     ]);
-
-  const categories = Array.from(
-    new Set((clubOptions ?? []).map((c) => c.category).filter(Boolean)),
-  ) as string[];
 
   const items = (events ?? []) as unknown as EventListData[];
   const happeningNow = (
@@ -179,32 +178,30 @@ export default async function EventsPage({
             {summary || "Events from verified DTU societies, soonest first."}
           </p>
 
-          {categories.length > 0 && (
-            <div
-              role="group"
-              aria-label="Filter by category"
-              className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0"
+          <div
+            role="group"
+            aria-label="Filter by category"
+            className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0"
+          >
+            <Link
+              href={filterLink({ category: undefined })}
+              aria-current={!category ? "true" : undefined}
+              className={chipClass(!category)}
             >
+              All
+            </Link>
+            {CATEGORY_KEYS.map((c) => (
               <Link
-                href={filterLink({ category: undefined })}
-                aria-current={!category ? "true" : undefined}
-                className={chipClass(!category)}
+                key={c}
+                href={filterLink({ category: c })}
+                aria-current={category === c ? "true" : undefined}
+                className={chipClass(category === c)}
               >
-                All
+                <CategoryDot category={c} className="h-[9px] w-[9px]" />
+                {categoryLabel(c)}
               </Link>
-              {categories.map((c) => (
-                <Link
-                  key={c}
-                  href={filterLink({ category: c })}
-                  aria-current={category === c ? "true" : undefined}
-                  className={chipClass(category === c)}
-                >
-                  <CategoryDot category={categoryKey(c)} className="h-[9px] w-[9px]" />
-                  {c}
-                </Link>
-              ))}
-            </div>
-          )}
+            ))}
+          </div>
 
           <div className="mt-3 flex flex-wrap items-start gap-x-5">
             <details className="group" open={Boolean(club || date)}>
@@ -311,7 +308,7 @@ export default async function EventsPage({
               </p>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
                 {filtered
-                  ? "Try another date or society, or clear the filters."
+                  ? "Try another category, date or society, or clear the filters."
                   : "When DTU societies publish events, they show up here, soonest first."}
               </p>
               {filtered ? (
