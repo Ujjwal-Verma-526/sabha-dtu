@@ -22,23 +22,6 @@ function supabaseOrigins(): { http: string[]; socket: string[] } {
   }
 }
 
-// Vercel preview deployments inject the Vercel Toolbar (comments, feedback)
-// for signed-in team members, loaded from vercel.live. Without these the
-// CSP blocks its script and every preview page logs a console error. Only
-// previews get them: VERCEL_ENV is "preview" there, "production" on the
-// live site, and unset locally.
-const vercelToolbar =
-  process.env.VERCEL_ENV === "preview"
-    ? {
-        script: ["https://vercel.live"],
-        style: ["https://vercel.live"],
-        img: ["https://vercel.live", "https://vercel.com"],
-        font: ["https://vercel.live", "https://assets.vercel.com"],
-        connect: ["https://vercel.live", "wss://ws-us3.pusher.com"],
-        frame: ["https://vercel.live"],
-      }
-    : { script: [], style: [], img: [], font: [], connect: [], frame: [] };
-
 function contentSecurityPolicy(isDev: boolean): string {
   const supabase = supabaseOrigins();
   const directives: Record<string, string[]> = {
@@ -50,21 +33,18 @@ function contentSecurityPolicy(isDev: boolean): string {
       "'unsafe-inline'",
       "'wasm-unsafe-eval'",
       ...(isDev ? ["'unsafe-eval'"] : []),
-      ...vercelToolbar.script,
     ],
-    "style-src": ["'self'", "'unsafe-inline'", ...vercelToolbar.style],
+    "style-src": ["'self'", "'unsafe-inline'"],
     // blob: and data: for the client-side image preview and canvas upload.
-    "img-src": ["'self'", "data:", "blob:", ...supabase.http, ...vercelToolbar.img],
-    "font-src": ["'self'", ...vercelToolbar.font],
+    "img-src": ["'self'", "data:", "blob:", ...supabase.http],
+    "font-src": ["'self'"],
     "media-src": ["'self'", "blob:"],
     "connect-src": [
       "'self'",
       ...supabase.http,
       ...supabase.socket,
       ...(isDev ? ["ws://localhost:*", "ws://127.0.0.1:*"] : []),
-      ...vercelToolbar.connect,
     ],
-    ...(vercelToolbar.frame.length ? { "frame-src": vercelToolbar.frame } : {}),
     "frame-ancestors": ["'none'"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],

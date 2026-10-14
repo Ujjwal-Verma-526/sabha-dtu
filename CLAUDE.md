@@ -79,7 +79,7 @@ Known and accepted by the user (2026-10-12). Don't "fix" these without being ask
 - **Managers can rename their club**, including a verified one. Only `slug`, `created_by` and `verified` are protected (`prevent_club_protected_field_changes`).
 - **Five dev-only npm "high" advisories** (`braces` → `micromatch` → `fast-glob` → `@next/eslint-plugin-next` → `eslint-config-next`). They only affect linting on developer machines; `npm audit --omit=dev` reports 0. The only fix offered, `npm audit fix --force`, downgrades `eslint-config-next` to 14.2.35, which breaks linting for this Next version. Don't run it.
 - **CSP `script-src` allows `'unsafe-inline'`** (Next.js inline RSC scripts). Safe while no user content is rendered as HTML. Revisit with nonces via `proxy.ts` if `dangerouslySetInnerHTML` or rich-text/markdown rendering is ever added.
-  Vercel preview builds (`VERCEL_ENV=preview`) also allow the Vercel Toolbar's `vercel.live` origins (`next.config.ts`); production and local builds don't.
+  The CSP is the same in every environment. The Vercel Toolbar is turned off for previews in the Vercel project settings (2026-10-14) because the CSP blocks its `vercel.live` script; if it's ever turned back on, previews log a CSP console error and DevTools issue on every page.
 
 ## Working style
 
