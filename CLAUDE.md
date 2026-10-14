@@ -67,6 +67,7 @@ Sabha is a DTU-first society/event management web app.
 - One accent: violet `primary` for buttons, links and focus. Saffron is only the wordmark dot, never a button or link.
 - Festival colours (category colours, auto-posters, the When/Where/Spots tiles, rani-pink "live") are for event content only. Forms, tickets and the door scanner stay plain. Category colours come from `src/lib/categories.ts` (`categoryKey`, `categoryColor`, `categoryInk`); until PR B they're picked from the club's free-text category. Rani pink means "live" and nothing else.
 - Fonts via `next/font/google`: Geist (UI), Bricolage Grotesque with the `wdth` axis (display headings and date numerals, `.font-display-tight`), Geist Mono (ticket references).
+- Pages that hide the phone tab bar (`HIDDEN_ON` in `src/components/layout/NavLinks.tsx`, today only the event page) get the header back arrow (`BackLink`): history back after an in-app navigation, otherwise `/events`.
 - There's no tailwind-merge: a className that conflicts with a component's own classes wins or loses by CSS order. Wrap the element or add a variant instead.
 - Every text pair must pass WCAG AA in both themes; control borders 3:1.
 
@@ -78,6 +79,7 @@ Known and accepted by the user (2026-10-12). Don't "fix" these without being ask
 - **Managers can rename their club**, including a verified one. Only `slug`, `created_by` and `verified` are protected (`prevent_club_protected_field_changes`).
 - **Five dev-only npm "high" advisories** (`braces` → `micromatch` → `fast-glob` → `@next/eslint-plugin-next` → `eslint-config-next`). They only affect linting on developer machines; `npm audit --omit=dev` reports 0. The only fix offered, `npm audit fix --force`, downgrades `eslint-config-next` to 14.2.35, which breaks linting for this Next version. Don't run it.
 - **CSP `script-src` allows `'unsafe-inline'`** (Next.js inline RSC scripts). Safe while no user content is rendered as HTML. Revisit with nonces via `proxy.ts` if `dangerouslySetInnerHTML` or rich-text/markdown rendering is ever added.
+  Vercel preview builds (`VERCEL_ENV=preview`) also allow the Vercel Toolbar's `vercel.live` origins (`next.config.ts`); production and local builds don't.
 
 ## Working style
 

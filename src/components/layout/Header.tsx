@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ButtonLink } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { DropdownMenu } from "@/components/layout/DropdownMenu";
-import { DesktopNav, ProfileLink } from "@/components/layout/NavLinks";
+import { BackLink, DesktopNav, ProfileLink } from "@/components/layout/NavLinks";
 import { getViewerRoles } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,13 +28,16 @@ export async function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 md:h-16 md:px-8">
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 text-[19px] font-semibold tracking-[-0.03em] text-ink"
-        >
-          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-saffron" />
-          Sabha
-        </Link>
+        <div className="flex items-center gap-1">
+          <BackLink />
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 text-[19px] font-semibold tracking-[-0.03em] text-ink"
+          >
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-saffron" />
+            Sabha
+          </Link>
+        </div>
 
         <DesktopNav />
 

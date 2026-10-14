@@ -49,6 +49,7 @@ const paths = {
   ),
   chevronDown: <path d="m7 10 5 5 5-5" />,
   arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
+  arrowLeft: <path d="M19 12H5M11 6l-6 6 6 6" />,
   filter: <path d="M4 6h16M7 12h10M10 18h4" />,
   manage: (
     <>
