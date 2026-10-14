@@ -138,6 +138,7 @@ export interface Database {
           registration_deadline: string | null;
           capacity: number | null;
           status: EventStatus;
+          category: string;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -154,6 +155,7 @@ export interface Database {
           registration_deadline?: string | null;
           capacity?: number | null;
           status?: EventStatus;
+          category?: string;
           created_by: string;
         };
         Update: Partial<{
@@ -167,6 +169,7 @@ export interface Database {
           registration_deadline: string | null;
           capacity: number | null;
           status: EventStatus;
+          category: string;
         }>;
         Relationships: [];
       };

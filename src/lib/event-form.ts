@@ -2,6 +2,8 @@
 
 export type EventFormValues = {
   title: string;
+  /** One of CATEGORY_KEYS (src/lib/categories.ts), or "" before a pick. */
+  category: string;
   description: string;
   venue: string;
   /** datetime-local value, "YYYY-MM-DDTHH:mm" */
@@ -26,6 +28,7 @@ export type EventFormState = {
 
 export const emptyEventValues: EventFormValues = {
   title: "",
+  category: "",
   description: "",
   venue: "",
   start_at: "",

@@ -1,9 +1,11 @@
-// Display colours for event categories. Event content only (posters, dots,
-// the event page tint); forms, tickets and the door scanner never use them.
-// The CSS colours live in globals.css (--cat-*, .poster-*).
+// Event categories: a fixed list, stored in events.category as these
+// lowercase keys. The events_category_valid CHECK
+// (supabase/migrations/20260904000001_event_categories.sql) allows exactly
+// these; change both together. Club categories are separate free text.
 //
-// Until events have their own fixed category, the club's free-text
-// category picks the colour: one of the five names (any case) or "other".
+// The colours are for event content only (posters, dots, the event page
+// tint); forms, tickets and the door scanner never use them. The CSS colours
+// live in globals.css (--cat-*, .poster-*).
 
 export const CATEGORY_KEYS = [
   "technical",
@@ -15,9 +17,26 @@ export const CATEGORY_KEYS = [
 
 export type CategoryKey = (typeof CATEGORY_KEYS)[number];
 
+const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  technical: "Technical",
+  cultural: "Cultural",
+  social: "Social",
+  entrepreneurship: "Entrepreneurship",
+  other: "Other",
+};
+
+export function isCategoryKey(value: unknown): value is CategoryKey {
+  return CATEGORY_KEYS.some((k) => k === value);
+}
+
+/** An event's stored category as a key; anything unexpected reads as "other". */
 export function categoryKey(category: string | null | undefined): CategoryKey {
-  const key = category?.trim().toLowerCase();
-  return CATEGORY_KEYS.find((k) => k === key) ?? "other";
+  return isCategoryKey(category) ? category : "other";
+}
+
+/** Display name, e.g. "Entrepreneurship". */
+export function categoryLabel(key: CategoryKey): string {
+  return CATEGORY_LABELS[key];
 }
 
 /** CSS colour for a category dot or tint, e.g. `var(--cat-technical)`. */

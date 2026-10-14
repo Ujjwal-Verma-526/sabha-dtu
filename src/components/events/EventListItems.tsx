@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CategoryDot, EventPoster } from "@/components/events/EventPoster";
-import { categoryKey } from "@/lib/categories";
+import { categoryKey, categoryLabel } from "@/lib/categories";
 import { formatIstDateTime, formatIstTime, isSameIstDay } from "@/lib/ist";
 
 export type EventListData = {
@@ -11,12 +11,13 @@ export type EventListData = {
   start_at: string;
   end_at: string;
   capacity: number | null;
-  club: { name: string; slug: string; verified: boolean; category: string | null };
+  category: string;
+  club: { name: string; slug: string; verified: boolean };
 };
 
 /** One event in the day-grouped /events list: text on the left, poster on the right. */
 export function EventRow({ event }: { event: EventListData }) {
-  const category = categoryKey(event.club.category);
+  const category = categoryKey(event.category);
   return (
     <Link
       href={`/events/${event.slug}`}
@@ -25,12 +26,8 @@ export function EventRow({ event }: { event: EventListData }) {
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-[13px] font-medium text-ink-soft">
           {formatIstTime(event.start_at)}
-          {event.club.category && (
-            <>
-              <CategoryDot category={category} className="ml-1" />
-              <span className="truncate">{event.club.category}</span>
-            </>
-          )}
+          <CategoryDot category={category} className="ml-1" />
+          <span className="truncate">{categoryLabel(category)}</span>
         </p>
         <h3 className="mt-0.5 text-[16.5px] leading-snug font-semibold tracking-[-0.015em] text-ink group-hover:text-primary md:text-lg">
           {event.title}
@@ -54,7 +51,7 @@ export function EventRow({ event }: { event: EventListData }) {
 
 /** Rani-pink band for an event that's running right now. */
 export function LiveBanner({ event }: { event: EventListData }) {
-  const category = categoryKey(event.club.category);
+  const category = categoryKey(event.category);
   const showsEnd = event.end_at !== event.start_at;
   return (
     <Link

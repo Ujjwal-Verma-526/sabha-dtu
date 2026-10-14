@@ -53,7 +53,7 @@ export default async function EditEventPage({
   const { data: event } = await supabase
     .from("events")
     .select(
-      "id, club_id, title, slug, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status",
+      "id, club_id, title, slug, category, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status",
     )
     .eq("id", eventId)
     .eq("club_id", clubId)
@@ -125,6 +125,7 @@ export default async function EditEventPage({
         action={updateWithIds}
         initialValues={{
           title: event.title,
+          category: event.category,
           description: event.description ?? "",
           venue: event.venue ?? "",
           start_at: toIstDateTimeLocal(event.start_at),

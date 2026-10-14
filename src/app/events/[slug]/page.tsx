@@ -13,6 +13,7 @@ import {
   categoryColor,
   categoryInk,
   categoryKey,
+  categoryLabel,
   type CategoryKey,
 } from "@/lib/categories";
 import {
@@ -36,7 +37,7 @@ async function getEvent(slug: string) {
   const { data } = await supabase
     .from("events")
     .select(
-      "id, title, slug, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status, club:clubs(id, name, slug, verified, category)",
+      "id, title, slug, category, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status, club:clubs(id, name, slug, verified, category)",
     )
     .eq("slug", slug)
     .eq("status", "published")
@@ -47,6 +48,7 @@ async function getEvent(slug: string) {
         id: string;
         title: string;
         slug: string;
+        category: string;
         description: string | null;
         banner_url: string | null;
         venue: string | null;
@@ -267,7 +269,7 @@ export default async function EventPage({
 
   const now = new Date();
   const registrationClosed = isRegistrationClosed(event, now);
-  const category = categoryKey(event.club?.category);
+  const category = categoryKey(event.category);
   const clubName = event.club?.name ?? "A DTU society";
 
   // A multi-day event shows its end day too ("Mon 8:00 am"), not just the
@@ -365,12 +367,10 @@ export default async function EventPage({
                 {event.club.verified && <VerifiedBadge label={false} />}
               </>
             )}
-            {event.club?.category && (
-              <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[13px] font-normal text-ink-soft">
-                <CategoryDot category={category} />
-                {event.club.category}
-              </span>
-            )}
+            <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[13px] font-normal text-ink-soft">
+              <CategoryDot category={category} />
+              {categoryLabel(category)}
+            </span>
           </div>
 
           <DateNumeral
