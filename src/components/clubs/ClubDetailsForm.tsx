@@ -18,7 +18,7 @@ function FieldError({ name, message }: { name: string; message?: string }) {
       id={`${name}-error`}
       role="alert"
       // A long value in the message (a pasted URL) must wrap, not widen the card.
-      className="text-xs text-red-700 [overflow-wrap:anywhere]"
+      className="text-xs text-danger [overflow-wrap:anywhere]"
     >
       {message}
     </span>
@@ -52,7 +52,7 @@ export function ClubDetailsForm({
   const invalid = (name: ClubDetailsFieldName) => ({
     "aria-invalid": Boolean(fieldErrors[name]),
     "aria-describedby": fieldErrors[name] ? `${name}-error` : undefined,
-    className: fieldErrors[name] ? "border-red-400" : undefined,
+    className: fieldErrors[name] ? "border-danger" : undefined,
   });
 
   return (
@@ -102,12 +102,12 @@ export function ClubDetailsForm({
       </SubmitButton>
 
       {state.error && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       )}
       {state.saved && (
-        <p role="status" className="text-sm text-green-700">
+        <p role="status" className="text-sm text-success">
           Changes saved.
         </p>
       )}

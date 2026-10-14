@@ -46,3 +46,6 @@ supabase/.temp/
 
 # copied from node_modules by scripts/copy-zxing-wasm.mjs
 /public/vendor/zxing/
+
+# local UI design mockups (phase 1 review, not shipped)
+/design-previews/

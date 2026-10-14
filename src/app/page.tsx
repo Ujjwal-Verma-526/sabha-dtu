@@ -113,7 +113,7 @@ export default function Home() {
           <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {steps.map((step) => (
               <Card key={step.n} className="flex flex-col gap-2">
-                <span className="font-mono text-sm text-accent">
+                <span className="font-mono text-sm text-primary">
                   {step.n}
                 </span>
                 <h3 className="font-display text-base font-semibold text-ink">

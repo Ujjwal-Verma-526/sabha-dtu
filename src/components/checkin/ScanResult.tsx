@@ -20,9 +20,9 @@ const VIBRATION: Record<ResultTone, number[]> = {
 };
 
 const toneClass: Record<ResultTone, string> = {
-  success: "border-green-300 bg-green-50 text-green-900",
-  warning: "border-amber-300 bg-amber-50 text-amber-950",
-  error: "border-red-300 bg-red-50 text-red-900",
+  success: "border-success/30 bg-success-soft text-success",
+  warning: "border-warning/30 bg-warning-soft text-warning",
+  error: "border-danger-line bg-danger-soft text-danger",
 };
 
 const iconClass: Record<ResultTone, string> = {
@@ -97,7 +97,7 @@ export function ScanResult({
               <p className="mt-1 break-words text-base font-medium">{result.view.message}</p>
             </div>
           </div>
-          <Button type="button" variant="ghost" className="w-full bg-white/70" onClick={onDismiss}>
+          <Button type="button" variant="ghost" className="w-full" onClick={onDismiss}>
             Scan next
           </Button>
         </div>

@@ -105,7 +105,7 @@ export function LoginForm({ next, initialError }: LoginFormProps) {
             >
               {status === "sending" ? "Sending…" : "Send magic link"}
             </Button>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
           </form>
         )}
 
@@ -124,7 +124,7 @@ export function LoginForm({ next, initialError }: LoginFormProps) {
           Continue with Google
         </Button>
         {status === "sent" && error && (
-          <p className="mt-3 text-sm text-red-600">{error}</p>
+          <p className="mt-3 text-sm text-danger">{error}</p>
         )}
         <p className="mt-6 text-center text-xs text-ink-soft">
           By continuing you agree to the{" "}

@@ -38,7 +38,7 @@ function ManualRow({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="break-words font-medium text-ink">{row.name}</p>
-          <p className={cn("font-mono text-xs", checkedIn ? "text-green-700" : "text-ink-soft")}>
+          <p className={cn("font-mono text-xs", checkedIn ? "text-success" : "text-ink-soft")}>
             {statusLine(row, new Date())}
           </p>
         </div>

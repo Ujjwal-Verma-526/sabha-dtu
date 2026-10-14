@@ -22,12 +22,12 @@ export function ActionForm({ action, className, children }: ActionFormProps) {
     <form action={formAction} className={className}>
       {children}
       {state.status === "error" && (
-        <p role="alert" className="mt-2 text-sm text-red-700">
+        <p role="alert" className="mt-2 text-sm text-danger">
           {state.message}
         </p>
       )}
       {state.status === "success" && (
-        <p role="status" className="mt-2 text-sm text-green-700">
+        <p role="status" className="mt-2 text-sm text-success">
           {state.message}
         </p>
       )}
