@@ -3,15 +3,16 @@ import Link from "next/link";
 import type { ComponentPropsWithoutRef } from "react";
 
 const variants = {
-  primary: "bg-primary text-white hover:bg-primary-dark",
-  accent: "bg-accent text-ink hover:brightness-95",
-  ghost: "bg-transparent text-ink border border-line hover:border-ink",
+  primary: "bg-primary text-on-primary hover:bg-primary-hover",
+  ghost: "border border-control bg-surface text-ink hover:border-ink",
+  soft: "bg-soft text-ink hover:bg-line",
+  danger: "border border-danger-line bg-surface text-danger hover:bg-danger-soft",
 } as const;
 
 type Variant = keyof typeof variants;
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60";
 
 type ButtonProps = ComponentPropsWithoutRef<"button"> & { variant?: Variant };
 

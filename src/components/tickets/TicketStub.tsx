@@ -43,10 +43,10 @@ const pillBase =
   "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-xs uppercase tracking-wide";
 
 const stateBadgeClass: Record<TicketState, string> = {
-  active: "border-accent bg-accent text-ink",
+  active: "border-success/30 bg-success-soft text-success",
   on_hold: "border-line bg-surface text-ink-soft",
   ended: "border-line bg-ink/5 text-ink-soft",
-  cancelled: "border-red-200 bg-red-50 text-red-700",
+  cancelled: "border-danger-line bg-danger-soft text-danger",
 };
 
 // "Checked in at 6:42 pm", with the date too if it isn't the event's day.
@@ -146,7 +146,7 @@ export function TicketStub({
         // An active registration without a ticket row should not happen
         // (the issue_registration_ticket trigger runs in the same
         // transaction), but say so plainly rather than show nothing.
-        <p className="text-center text-sm text-red-700">
+        <p className="text-center text-sm text-danger">
           Your QR couldn&apos;t be loaded. Refresh the page; if it still
           doesn&apos;t appear, contact the organisers with code{" "}
           <span className="font-mono">{ticket.ticketCode}</span>.
@@ -156,7 +156,7 @@ export function TicketStub({
           className={cn(
             "mx-auto flex h-48 w-48 flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-center",
             state === "cancelled"
-              ? "border-red-200 bg-red-50 text-red-700"
+              ? "border-danger-line bg-danger-soft text-danger"
               : "border-line bg-ink/5 text-ink-soft",
           )}
         >

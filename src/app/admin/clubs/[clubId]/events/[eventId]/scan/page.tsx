@@ -111,8 +111,8 @@ export default async function ScanTicketsPage({
         className={cn(
           "mt-4 rounded-xl border px-4 py-3 text-sm",
           windowStatus.kind === "open"
-            ? "border-green-200 bg-green-50 text-green-800"
-            : "border-amber-200 bg-amber-50 text-amber-900",
+            ? "border-success/30 bg-success-soft text-success"
+            : "border-warning/30 bg-warning-soft text-warning",
         )}
       >
         {describeWindow(windowStatus, now)}

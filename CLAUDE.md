@@ -60,6 +60,17 @@ Sabha is a DTU-first society/event management web app.
 - Dry-running a live paste file: clone the local DB with `pg_dump -U supabase_admin -d postgres | psql -U supabase_admin -d <clone>` into a database created `owner postgres` (so `postgres` owns `public`, like live). Paste-run the file there as `postgres`, run the verify query, run it a second time (expect the "already applied" abort), run the tests, then drop the clone.
 - `src/lib/supabase/types.ts` is hand-maintained. Check changes against `npx supabase gen types typescript --local`, but keep the file's existing style (the generator types every RPC result column as non-null).
 
+## UI (Sabha v1)
+
+- Built in four PRs (A: foundation, /events, event page; B: fixed event categories; C: tickets, profile, clubs, admin, scan, landing, login, legal, 404; D: event form behaviour). Mockups live in the gitignored `design-previews/sabha-v1/`.
+- Tokens are CSS variables in `src/app/globals.css`, exposed to Tailwind via `@theme inline`. Light and dark follow `prefers-color-scheme`; there is no toggle. Use the tokens (`paper`, `surface`, `soft`, `ink`, `ink-soft`, `line`, `control`, `primary`, `on-primary`, `success`, `warning`, `danger`, ...), never raw Tailwind palette colours, or dark mode breaks. Text on `primary` is `text-on-primary` (dark text in dark mode).
+- One accent: violet `primary` for buttons, links and focus. Saffron is only the wordmark dot, never a button or link.
+- Festival colours (category colours, auto-posters, the When/Where/Spots tiles, rani-pink "live") are for event content only. Forms, tickets and the door scanner stay plain. Category colours come from `src/lib/categories.ts` (`categoryKey`, `categoryColor`, `categoryInk`); until PR B they're picked from the club's free-text category. Rani pink means "live" and nothing else.
+- Fonts via `next/font/google`: Geist (UI), Bricolage Grotesque with the `wdth` axis (display headings and date numerals, `.font-display-tight`), Geist Mono (ticket references).
+- Pages that hide the phone tab bar (`HIDDEN_ON` in `src/components/layout/NavLinks.tsx`, today only the event page) get the header back arrow (`BackLink`): history back after an in-app navigation, otherwise `/events`.
+- There's no tailwind-merge: a className that conflicts with a component's own classes wins or loses by CSS order. Wrap the element or add a variant instead.
+- Every text pair must pass WCAG AA in both themes; control borders 3:1.
+
 ## Accepted limitations
 
 Known and accepted by the user (2026-10-12). Don't "fix" these without being asked.
@@ -68,6 +79,7 @@ Known and accepted by the user (2026-10-12). Don't "fix" these without being ask
 - **Managers can rename their club**, including a verified one. Only `slug`, `created_by` and `verified` are protected (`prevent_club_protected_field_changes`).
 - **Five dev-only npm "high" advisories** (`braces` → `micromatch` → `fast-glob` → `@next/eslint-plugin-next` → `eslint-config-next`). They only affect linting on developer machines; `npm audit --omit=dev` reports 0. The only fix offered, `npm audit fix --force`, downgrades `eslint-config-next` to 14.2.35, which breaks linting for this Next version. Don't run it.
 - **CSP `script-src` allows `'unsafe-inline'`** (Next.js inline RSC scripts). Safe while no user content is rendered as HTML. Revisit with nonces via `proxy.ts` if `dangerouslySetInnerHTML` or rich-text/markdown rendering is ever added.
+  The CSP is the same in every environment. The Vercel Toolbar is turned off for previews in the Vercel project settings (2026-10-14) because the CSP blocks its `vercel.live` script; if it's ever turned back on, previews log a CSP console error and DevTools issue on every page.
 
 ## Working style
 
@@ -75,10 +87,10 @@ Known and accepted by the user (2026-10-12). Don't "fix" these without being ask
 - Prefer small, incremental changes and test after each major feature.
 - Run lint (`npm run lint`), typecheck (`npx tsc --noEmit`) and `npm run build` before declaring a feature complete.
 - Never commit directly to `main`: work on a feature branch and open a PR. Commit meaningful completed milestones.
-- No `Co-Authored-By: Claude` trailer on commits.
+- No `Co-Authored-By: Claude` trailer on commits, and no attribution line (e.g. "Generated with Claude Code") in PR bodies.
 - If the project state is ambiguous, inspect the repository, migrations, git history, and existing code rather than guessing.
 
-## Current Project State (as of 2026-10-12)
+## Current Project State (as of 2026-10-14)
 
 **Completed (on `main`):**
 - Authentication (Supabase Auth) and user profiles
@@ -101,8 +113,11 @@ Known and accepted by the user (2026-10-12). Don't "fix" these without being ask
 
 - `/profile` save with field errors and a "Saved" confirmation, `npm audit fix`, and migration `20260901000001_profile_field_checks` (PR #14).
 
-**In review (branch `fix/security-hardening`):**
-- Security hardening, migration `20260902000001_security_hardening`: helpers answer only for the caller, club admin rows protected, URL/handle CHECKs with mirrored form checks (club details form now keeps input and shows field errors), no anonymous banner listing, TRUNCATE revoked, `/clubs` search neutralised, landing copy no longer claims sign-up needs a @dtu.ac.in email.
+- Security hardening (PR #15), migration `20260902000001_security_hardening`: helpers answer only for the caller, club admin rows protected, URL/handle CHECKs with mirrored form checks (club details form now keeps input and shows field errors), no anonymous banner listing, TRUNCATE revoked, `/clubs` search neutralised, landing copy no longer claims sign-up needs a @dtu.ac.in email.
+- Security headers and club logo upload (PR #16), `/privacy` and `/terms` (PR #17).
+
+**In review (branch `feat/ui-foundation`):**
+- Sabha v1 PR A: tokens, fonts, light/dark, shared components, header with phone tab bar, `/events` and the event page.
 
 The deferrals on RSVP/registration, QR tickets and door check-in are all lifted (user's explicit instructions, 2026-10-08 and 2026-10-11).
 

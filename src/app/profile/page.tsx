@@ -56,7 +56,7 @@ export default async function ProfilePage() {
             QR tickets for events you&apos;ve registered for.
           </p>
         </div>
-        <ButtonLink href="/tickets" variant="accent" className="shrink-0">
+        <ButtonLink href="/tickets" variant="soft" className="shrink-0">
           View tickets
         </ButtonLink>
       </Card>

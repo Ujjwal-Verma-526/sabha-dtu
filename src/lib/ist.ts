@@ -95,3 +95,65 @@ export function formatIstDate(instant: Date | string): string {
 export function isSameIstDay(a: Date | string, b: Date | string): boolean {
   return formatIstDate(a) === formatIstDate(b);
 }
+
+const dayPartsFormat = new Intl.DateTimeFormat("en-IN", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: IST_TIME_ZONE,
+});
+const longDateFormat = new Intl.DateTimeFormat("en-IN", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: IST_TIME_ZONE,
+});
+const shortDateFormat = new Intl.DateTimeFormat("en-IN", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: IST_TIME_ZONE,
+});
+
+/** The IST calendar day as "YYYY-MM-DD", for grouping by day. */
+export function istDayKey(instant: Date | string): string {
+  return toIstDateTimeLocal(instant).slice(0, 10);
+}
+
+/** { weekday: "Fri", day: "16", month: "Oct" } in IST, for date numerals. */
+export function istDayParts(instant: Date | string): {
+  weekday: string;
+  day: string;
+  month: string;
+} {
+  const parts: Record<string, string> = {};
+  for (const part of dayPartsFormat.formatToParts(new Date(instant))) {
+    parts[part.type] = part.value;
+  }
+  return { weekday: parts.weekday, day: parts.day, month: parts.month };
+}
+
+/** "Friday, 16 October" */
+export function formatIstLongDate(instant: Date | string): string {
+  return longDateFormat.format(new Date(instant));
+}
+
+/** "Fri, 16 Oct" */
+export function formatIstShortDate(instant: Date | string): string {
+  return shortDateFormat.format(new Date(instant));
+}
+
+/** Whole IST calendar days from `from` to `to` (negative if `to` is earlier). */
+export function istDaysBetween(from: Date | string, to: Date | string): number {
+  const day = (instant: Date | string) => Date.parse(`${istDayKey(instant)}T00:00:00Z`);
+  return Math.round((day(to) - day(from)) / (24 * 60 * 60 * 1000));
+}
+
+/** "Today", "Tomorrow", "In 3 days" (up to two weeks out), else null. */
+export function istRelativeDay(instant: Date | string, now: Date): string | null {
+  const days = istDaysBetween(now, instant);
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days > 1 && days < 14) return `In ${days} days`;
+  return null;
+}

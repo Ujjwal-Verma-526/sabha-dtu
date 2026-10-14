@@ -1,8 +1,20 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { EventCard, type EventCardData } from "@/components/events/EventCard";
+import { DateNumeral } from "@/components/events/DateNumeral";
+import { CategoryDot } from "@/components/events/EventPoster";
+import { EventRow, LiveBanner, type EventListData } from "@/components/events/EventListItems";
+import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
+import { fieldClass } from "@/components/ui/Input";
+import { categoryKey } from "@/lib/categories";
 import { isHappeningNow } from "@/lib/event-timing";
-import { istDayRange } from "@/lib/ist";
+import {
+  formatIstShortDate,
+  istDayKey,
+  istDayRange,
+  istDaysBetween,
+  istRelativeDay,
+} from "@/lib/ist";
 import { EVENT_END_FALLBACK_HOURS } from "@/lib/tickets";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +24,24 @@ export const metadata = {
   title: "Events — Sabha",
   description: "Upcoming DTU society events, all in one place.",
 };
+
+/** Days since this IST week's Monday (0 = Monday). */
+function istWeekday(instant: Date | string) {
+  return (new Date(`${istDayKey(instant)}T00:00:00Z`).getUTCDay() + 6) % 7;
+}
+
+/** "This week", "Next week" or "Later", by IST calendar weeks starting Monday. */
+function weekLabel(instant: string, now: Date) {
+  const weeks = Math.floor((istDaysBetween(now, instant) + istWeekday(now)) / 7);
+  return weeks <= 0 ? "This week" : weeks === 1 ? "Next week" : "Later";
+}
+
+function plural(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+const softButtonClass =
+  "mt-4 inline-flex min-h-11 items-center rounded-xl bg-soft px-4 text-[15px] font-semibold text-ink hover:bg-line";
 
 export default async function EventsPage({
   searchParams,
@@ -84,9 +114,9 @@ export default async function EventsPage({
     new Set((clubOptions ?? []).map((c) => c.category).filter(Boolean)),
   ) as string[];
 
-  const items = (events ?? []) as unknown as EventCardData[];
+  const items = (events ?? []) as unknown as EventListData[];
   const happeningNow = (
-    (liveEvents ?? []) as unknown as (EventCardData & { end_at: string })[]
+    (liveEvents ?? []) as unknown as EventListData[]
   ).filter((event) => isHappeningNow(event, now));
 
   function filterLink(overrides: Partial<{ club: string; category: string; date: string }>) {
@@ -99,142 +129,220 @@ export default async function EventsPage({
     return qs ? `/events?${qs}` : "/events";
   }
 
+  // Day groups (IST), each under its week heading.
+  const days: { key: string; week: string; events: EventListData[] }[] = [];
+  for (const event of items) {
+    const key = istDayKey(event.start_at);
+    const last = days.at(-1);
+    if (last?.key === key) last.events.push(event);
+    else days.push({ key, week: weekLabel(event.start_at, now), events: [event] });
+  }
+
+  const filtered = Boolean(club || category || date);
+  const societies = new Set(items.map((event) => event.club.slug)).size;
+  const summary = [
+    items.length > 0
+      ? `${plural(items.length, "upcoming event", "upcoming events")} from ${plural(societies, "society", "societies")}.`
+      : "",
+    happeningNow.length === 1
+      ? "One is on right now."
+      : happeningNow.length > 1
+        ? `${happeningNow.length} are on right now.`
+        : "",
+  ]
+    .join(" ")
+    .trim();
+
+  const chipClass = (on: boolean) =>
+    cn(
+      "inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors",
+      on ? "bg-ink text-paper" : "bg-soft text-ink hover:bg-line",
+    );
+
   return (
-    <main className="mx-auto max-w-6xl flex-1 px-6 py-12">
-      <h1 className="font-display text-3xl font-bold text-ink">Events</h1>
-      <p className="mt-2 text-ink-soft">
-        Published events from verified DTU societies, live and upcoming.
-      </p>
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 md:px-8 md:pt-11">
+      <div className="md:grid md:grid-cols-[minmax(0,1fr)_300px] md:gap-14">
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-bold tracking-[0.08em] text-live-text uppercase">
+            {formatIstShortDate(now)} · what&apos;s on
+          </p>
+          <h1 className="font-display-tight mt-1.5 text-[42px] leading-[0.95] text-ink md:text-[68px]">
+            What&apos;s on at{" "}
+            <span className="swash">
+              DTU
+              <svg viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M2 11c18-6 40-8 60-6s26 4 36 2" />
+              </svg>
+            </span>
+          </h1>
+          <p className="mt-4 text-ink-soft">
+            {summary || "Events from verified DTU societies, soonest first."}
+          </p>
 
-      <form method="get" className="mt-8 flex flex-wrap items-end gap-3">
-        {category && <input type="hidden" name="category" value={category} />}
-        {club && <input type="hidden" name="club" value={club} />}
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-ink">Date</span>
-          <input
-            type="date"
-            name="date"
-            defaultValue={date ?? ""}
-            className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-ink">Society</span>
-          <select
-            name="club"
-            defaultValue={club ?? ""}
-            className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-          >
-            <option value="">All societies</option>
-            {(clubOptions ?? []).map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="submit"
-          className="rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink hover:border-primary"
-        >
-          Filter
-        </button>
-        {(club || category || date) && (
-          <Link
-            href="/events"
-            className="text-sm text-ink-soft hover:text-ink"
-          >
-            Clear filters
-          </Link>
-        )}
-      </form>
-
-      {categories.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link
-            href={filterLink({ category: undefined })}
-            className={cn(
-              "rounded-full border px-3 py-1 font-mono text-xs uppercase tracking-wide",
-              !category
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-line text-ink-soft hover:border-primary",
-            )}
-          >
-            All categories
-          </Link>
-          {categories.map((c) => (
-            <Link
-              key={c}
-              href={filterLink({ category: c })}
-              className={cn(
-                "rounded-full border px-3 py-1 font-mono text-xs uppercase tracking-wide",
-                category === c
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-line text-ink-soft hover:border-primary",
-              )}
+          {categories.length > 0 && (
+            <div
+              role="group"
+              aria-label="Filter by category"
+              className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0"
             >
-              {c}
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {happeningNow.length > 0 && (
-        <section aria-labelledby="happening-now" className="mt-8">
-          <h2
-            id="happening-now"
-            className="flex items-center gap-2 font-display text-xl font-semibold text-ink"
-          >
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-primary" />
-            Happening now
-          </h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {happeningNow.map((event) => (
-              <EventCard key={event.slug} event={event} live />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {items.length > 0 ? (
-        <section aria-labelledby="upcoming" className="mt-8">
-          {happeningNow.length > 0 && (
-            <h2
-              id="upcoming"
-              className="font-display text-xl font-semibold text-ink"
-            >
-              Upcoming
-            </h2>
+              <Link
+                href={filterLink({ category: undefined })}
+                aria-current={!category ? "true" : undefined}
+                className={chipClass(!category)}
+              >
+                All
+              </Link>
+              {categories.map((c) => (
+                <Link
+                  key={c}
+                  href={filterLink({ category: c })}
+                  aria-current={category === c ? "true" : undefined}
+                  className={chipClass(category === c)}
+                >
+                  <CategoryDot category={categoryKey(c)} className="h-[9px] w-[9px]" />
+                  {c}
+                </Link>
+              ))}
+            </div>
           )}
-          <div
-            className={cn(
-              "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
-              happeningNow.length > 0 && "mt-4",
+
+          <div className="mt-3 flex flex-wrap items-start gap-x-5">
+            <details className="group" open={Boolean(club || date)}>
+              <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-1.5 rounded-lg text-sm font-medium text-ink-soft hover:text-ink [&::-webkit-details-marker]:hidden">
+                <Icon name="filter" />
+                Date and society
+                <Icon name="chevronDown" className="transition-transform group-open:rotate-180" />
+              </summary>
+              <form method="get" className="mt-2 mb-1 flex flex-wrap items-end gap-3">
+                {category && <input type="hidden" name="category" value={category} />}
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="font-semibold text-ink">Date</span>
+                  <input
+                    type="date"
+                    name="date"
+                    defaultValue={date ?? ""}
+                    className={cn(fieldClass, "min-h-11 py-2")}
+                  />
+                </label>
+                <label className="flex min-w-0 flex-col gap-1.5 text-sm">
+                  <span className="font-semibold text-ink">Society</span>
+                  <select
+                    name="club"
+                    defaultValue={club ?? ""}
+                    className={cn(fieldClass, "min-h-11 max-w-full py-2")}
+                  >
+                    <option value="">All societies</option>
+                    {(clubOptions ?? []).map((c) => (
+                      <option key={c.slug} value={c.slug}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button type="submit" variant="ghost">
+                  Apply
+                </Button>
+              </form>
+            </details>
+            {filtered && (
+              <Link
+                href="/events"
+                className="inline-flex min-h-10 items-center text-sm font-medium text-primary hover:underline"
+              >
+                Clear filters
+              </Link>
             )}
-          >
-            {items.map((event) => (
-              <EventCard key={event.slug} event={event} />
-            ))}
           </div>
-        </section>
-      ) : happeningNow.length === 0 ? (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <p className="font-display text-lg font-semibold text-ink">
-            No events match yet.
-          </p>
-          <p className="max-w-sm text-sm text-ink-soft">
-            {club || category || date
-              ? "Try a different filter or clear it."
-              : "Published events from DTU societies will show up here."}
-          </p>
+
+          {happeningNow.length > 0 && (
+            <section aria-labelledby="happening-now" className="mt-5 md:mt-6">
+              <h2 id="happening-now" className="sr-only">
+                Happening now
+              </h2>
+              <div className="flex flex-col gap-3">
+                {happeningNow.map((event) => (
+                  <LiveBanner key={event.slug} event={event} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {days.length > 0 ? (
+            <>
+              {days.map((day, index) => (
+                <section key={day.key} aria-label={formatIstShortDate(day.events[0].start_at)}>
+                  {day.week !== days[index - 1]?.week && (
+                    <h2 className="font-display-tight mt-9 text-[27px] text-ink md:mt-12 md:text-[34px]">
+                      {day.week}
+                    </h2>
+                  )}
+                  <div className="mt-5 md:mt-6 md:grid md:grid-cols-[132px_minmax(0,1fr)] md:gap-6 md:border-t md:border-line md:pt-5">
+                    <div className="flex items-end gap-2.5 border-b border-line pb-2.5 md:sticky md:top-24 md:block md:self-start md:border-0 md:pb-0">
+                      <DateNumeral
+                        instant={day.events[0].start_at}
+                        className="md:flex-col md:items-start md:gap-2"
+                        numeralClassName="md:text-[76px]"
+                      />
+                      <span className="ml-auto pb-px text-[13px] text-ink-soft md:mt-2 md:ml-0 md:block">
+                        {istRelativeDay(day.events[0].start_at, now)}
+                      </span>
+                    </div>
+                    <div>
+                      {day.events.map((event) => (
+                        <EventRow key={event.slug} event={event} />
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              ))}
+              <p className="mt-7 text-[13.5px] text-ink-soft">
+                That&apos;s everything published so far. Societies add events all week.
+              </p>
+            </>
+          ) : (
+            <div className="mt-8 rounded-2xl border border-dashed border-control px-6 py-10 text-center">
+              <Icon name="calendar" className="mx-auto text-[28px] text-ink-soft" />
+              <p className="mt-3 text-lg font-semibold text-ink">
+                {filtered
+                  ? "Nothing matches these filters"
+                  : happeningNow.length > 0
+                    ? "Nothing else coming up yet"
+                    : "Nothing on yet"}
+              </p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
+                {filtered
+                  ? "Try another date or society, or clear the filters."
+                  : "When DTU societies publish events, they show up here, soonest first."}
+              </p>
+              {filtered ? (
+                <Link href="/events" className={softButtonClass}>
+                  Clear filters
+                </Link>
+              ) : (
+                <Link href="/clubs" className={softButtonClass}>
+                  Browse societies
+                </Link>
+              )}
+            </div>
+          )}
         </div>
-      ) : (
-        <p className="mt-10 text-sm text-ink-soft">
-          {club || category || date
-            ? "No upcoming events match these filters."
-            : "No upcoming events right now."}
-        </p>
-      )}
+
+        <aside className="hidden md:sticky md:top-24 md:mt-11 md:block md:self-start">
+          <div className="rounded-2xl border border-line bg-surface p-5 shadow-card">
+            <p className="font-semibold tracking-[-0.015em] text-ink">Running a society event?</p>
+            <p className="mt-1.5 text-[13.5px] text-ink-soft">
+              Society admins and coordinators publish from Manage, in the header. A title, a time
+              and a venue is enough to go live.
+            </p>
+            <Link
+              href="/clubs"
+              className="mt-4 flex min-h-11 items-center justify-center rounded-xl border border-control text-[15px] font-semibold text-ink hover:border-ink"
+            >
+              Find your society
+            </Link>
+          </div>
+        </aside>
+      </div>
     </main>
   );
 }

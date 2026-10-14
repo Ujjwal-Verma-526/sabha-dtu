@@ -207,7 +207,7 @@ export function CameraScanner({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-ink">
+      <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-black">
         <video
           ref={videoRef}
           playsInline
@@ -220,7 +220,7 @@ export function CameraScanner({
             className={
               paused
                 ? "pointer-events-none absolute inset-[18%] rounded-2xl border-4 border-white/30"
-                : "pointer-events-none absolute inset-[18%] rounded-2xl border-4 border-accent"
+                : "pointer-events-none absolute inset-[18%] rounded-2xl border-4 border-white"
             }
           />
         ) : (
@@ -228,7 +228,7 @@ export function CameraScanner({
             <p className="text-sm text-white/80">
               {status === "starting" ? "Starting the camera…" : "Point the camera at a ticket's QR code."}
             </p>
-            <Button type="button" variant="accent" onClick={start} disabled={status === "starting"}>
+            <Button type="button" variant="primary" onClick={start} disabled={status === "starting"}>
               {status === "starting" ? "Starting…" : "Start camera"}
             </Button>
           </div>
@@ -242,7 +242,7 @@ export function CameraScanner({
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger">
           {ERROR_MESSAGE[error]}
         </p>
       )}

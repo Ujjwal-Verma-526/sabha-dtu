@@ -4,7 +4,7 @@ import type { EventStatus } from "@/lib/supabase/types";
 const styles: Record<EventStatus, string> = {
   draft: "border-line bg-surface text-ink-soft",
   published: "border-primary/30 bg-primary/10 text-primary",
-  cancelled: "border-red-200 bg-red-50 text-red-700",
+  cancelled: "border-danger-line bg-danger-soft text-danger",
   completed: "border-line bg-ink/5 text-ink-soft",
 };
 

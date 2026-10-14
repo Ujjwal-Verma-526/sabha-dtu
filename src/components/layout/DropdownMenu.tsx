@@ -11,6 +11,8 @@ type DropdownMenuProps = {
   items: MenuItem[];
   /** Extra classes for the wrapper (e.g. to hide it at some widths). */
   className?: string;
+  /** Classes for the toggle button. */
+  buttonClassName?: string;
 };
 
 /**
@@ -18,7 +20,12 @@ type DropdownMenuProps = {
  * viewport edges (so long labels truncate instead of overflowing); from `sm`
  * up it hangs off the button.
  */
-export function DropdownMenu({ label, items, className }: DropdownMenuProps) {
+export function DropdownMenu({
+  label,
+  items,
+  className,
+  buttonClassName = "text-sm font-medium text-ink-soft transition-colors hover:text-ink",
+}: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -45,18 +52,18 @@ export function DropdownMenu({ label, items, className }: DropdownMenuProps) {
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((value) => !value)}
-        className="text-[13px] font-medium text-ink-soft transition-colors hover:text-ink sm:text-sm"
+        className={buttonClassName}
       >
         {label} <span aria-hidden="true" className="text-[10px]">▾</span>
       </button>
       {open && (
-        <ul className="fixed inset-x-4 top-[4.25rem] z-50 rounded-2xl border border-line bg-surface p-2 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-3 sm:w-56">
+        <ul className="fixed inset-x-4 top-[4rem] z-50 rounded-2xl border border-line bg-surface p-2 shadow-card sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-3 sm:w-56">
           {items.map((item) => (
             <li key={`${item.href}-${item.label}`}>
               <Link
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="block truncate rounded-xl px-3 py-2 text-sm text-ink hover:bg-ink/5"
+                className="block truncate rounded-xl px-3 py-2 text-sm text-ink hover:bg-soft"
               >
                 {item.label}
               </Link>

@@ -23,7 +23,7 @@ type ProfileFormProps = {
 function FieldError({ name, message }: { name: string; message?: string }) {
   if (!message) return null;
   return (
-    <span id={`${name}-error`} role="alert" className="text-xs text-red-700">
+    <span id={`${name}-error`} role="alert" className="text-xs text-danger">
       {message}
     </span>
   );
@@ -40,7 +40,7 @@ export function ProfileForm({ action, initialValues }: ProfileFormProps) {
   const invalid = (name: ProfileFieldName) => ({
     "aria-invalid": Boolean(fieldErrors[name]),
     "aria-describedby": fieldErrors[name] ? `${name}-error` : undefined,
-    className: fieldErrors[name] ? "border-red-400" : undefined,
+    className: fieldErrors[name] ? "border-danger" : undefined,
   });
 
   return (
@@ -48,7 +48,7 @@ export function ProfileForm({ action, initialValues }: ProfileFormProps) {
       {state.error && (
         <p
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+          className="rounded-lg border border-danger-line bg-danger-soft px-3 py-2 text-sm text-danger"
         >
           {state.error}
         </p>
@@ -56,7 +56,7 @@ export function ProfileForm({ action, initialValues }: ProfileFormProps) {
       {state.saved && (
         <p
           role="status"
-          className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800"
+          className="rounded-lg border border-success/30 bg-success-soft px-3 py-2 text-sm text-success"
         >
           Saved
         </p>

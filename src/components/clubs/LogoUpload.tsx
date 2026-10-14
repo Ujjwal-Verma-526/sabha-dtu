@@ -83,7 +83,7 @@ export function LogoUpload({
           name={clubName}
           logoUrl={logoUrl || null}
           className={`h-16 w-16 shrink-0 text-lg ${
-            invalid ? "ring-2 ring-red-400" : ""
+            invalid ? "ring-2 ring-danger" : ""
           }`}
         />
         <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -126,7 +126,7 @@ export function LogoUpload({
         image works best.
       </span>
       {error && (
-        <p role="alert" className="text-sm text-red-600 [overflow-wrap:anywhere]">
+        <p role="alert" className="text-sm text-danger [overflow-wrap:anywhere]">
           {error}
         </p>
       )}

@@ -23,7 +23,7 @@ export function CancelEventButton({
       <Button
         type="button"
         variant="ghost"
-        className="text-sm text-red-700"
+        className="text-sm text-danger"
         onClick={() => setConfirming(true)}
       >
         Cancel event
