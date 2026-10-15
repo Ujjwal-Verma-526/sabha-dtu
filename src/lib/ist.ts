@@ -149,6 +149,20 @@ export function istDaysBetween(from: Date | string, to: Date | string): number {
   return Math.round((day(to) - day(from)) / (24 * 60 * 60 * 1000));
 }
 
+/** Days since this IST week's Monday (0 = Monday). */
+export function istWeekday(instant: Date | string): number {
+  return (new Date(`${istDayKey(instant)}T00:00:00Z`).getUTCDay() + 6) % 7;
+}
+
+/**
+ * Midnight IST at the start of next Monday: the end of `now`'s IST
+ * calendar week, the same Monday-to-Sunday week /events calls "This week".
+ */
+export function istWeekEnd(now: Date): Date {
+  const today = parseIstDateTimeLocal(`${istDayKey(now)}T00:00`)!;
+  return new Date(today.getTime() + (7 - istWeekday(now)) * 24 * 60 * 60 * 1000);
+}
+
 /** "Today", "Tomorrow", "In 3 days" (up to two weeks out), else null. */
 export function istRelativeDay(instant: Date | string, now: Date): string | null {
   const days = istDaysBetween(now, instant);

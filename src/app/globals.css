@@ -61,6 +61,10 @@
   --tile-spots: #ffd6e7;
   --on-tile: #1c1326;
   --swash: #ffb020;
+  /* marigold as text (the landing eyebrow): darker in light mode for AA */
+  --marigold-text: #9a5c00;
+  /* the landing hero's dot grid and pinned-poster outlines (decorative) */
+  --hero-decor: #dadae2;
 
   --shadow-card: 0 1px 2px rgb(18 18 22 / 0.05), 0 10px 30px -14px rgb(18 18 22 / 0.22);
 }
@@ -98,6 +102,8 @@
     --tile-where: #6cc9a1;
     --tile-spots: #e39abb;
     --on-tile: #16101e;
+    --marigold-text: #ffb020;
+    --hero-decor: #2e2e38;
 
     --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 30px -14px rgb(0 0 0 / 0.7);
   }
@@ -140,6 +146,8 @@
   --color-tile-when: var(--tile-when);
   --color-tile-where: var(--tile-where);
   --color-tile-spots: var(--tile-spots);
+  --color-marigold-text: var(--marigold-text);
+  --color-hero-decor: var(--hero-decor);
   --shadow-card: var(--shadow-card);
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
@@ -282,6 +290,12 @@ body {
   stroke: var(--swash);
   stroke-width: 5;
   stroke-linecap: round;
+}
+
+/* the landing hero's faint dot grid */
+.hero-dots {
+  background-image: radial-gradient(var(--hero-decor) 1.2px, transparent 1.4px);
+  background-size: 26px 26px;
 }
 
 /* On phones the event page's Register bar is pinned to the bottom; keep the

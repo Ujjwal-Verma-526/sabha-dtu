@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { fieldClass } from "@/components/ui/Input";
 import { CATEGORY_KEYS, categoryLabel, isCategoryKey } from "@/lib/categories";
+import { happeningNowEndFloor, publicEventFeed } from "@/lib/event-feed";
 import { isHappeningNow } from "@/lib/event-timing";
 import {
   formatIstShortDate,
@@ -14,21 +15,14 @@ import {
   istDayRange,
   istDaysBetween,
   istRelativeDay,
+  istWeekday,
 } from "@/lib/ist";
-import { EVENT_END_FALLBACK_HOURS } from "@/lib/tickets";
 import { cn } from "@/lib/utils";
-
-const HOUR_MS = 60 * 60 * 1000;
 
 export const metadata = {
   title: "Events — Sabha",
   description: "Upcoming DTU society events, all in one place.",
 };
-
-/** Days since this IST week's Monday (0 = Monday). */
-function istWeekday(instant: Date | string) {
-  return (new Date(`${istDayKey(instant)}T00:00:00Z`).getUTCDay() + 6) % 7;
-}
 
 /** "This week", "Next week" or "Later", by IST calendar weeks starting Monday. */
 function weekLabel(instant: string, now: Date) {
@@ -56,20 +50,10 @@ export default async function EventsPage({
   const supabase = await createClient();
   const now = new Date();
 
-  // Public feed: only published events belonging to a verified club — the
-  // clubs!inner join plus the club.verified filter keeps an unverified
-  // club's events out of the public feed, same as /clubs already does for
-  // the club directory itself. "Upcoming" and "Happening now" are the same
-  // feed split at the start time, so they share these filters.
+  // "Upcoming" and "Happening now" are the same public feed split at the
+  // start time, so they share these filters.
   function publicFeed() {
-    let feed = supabase
-      .from("events")
-      .select(
-        "id, title, slug, category, banner_url, venue, start_at, end_at, capacity, club:clubs!inner(name, slug, verified)",
-      )
-      .eq("status", "published")
-      .eq("club.verified", true)
-      .order("start_at");
+    let feed = publicEventFeed(supabase);
 
     if (club) {
       feed = feed.eq("club.slug", club);
@@ -91,16 +75,10 @@ export default async function EventsPage({
 
   const upcomingQuery = publicFeed().gte("start_at", now.toISOString());
 
-  // Started and not over. end_at >= now - fallback is a superset (an event
-  // with end_at = start_at counts as running for EVENT_END_FALLBACK_HOURS);
-  // isHappeningNow below applies the exact effective-end rule, the same one
-  // tickets and door check-in use.
+  // Started and not over; isHappeningNow below applies the exact rule.
   const happeningNowQuery = publicFeed()
     .lte("start_at", now.toISOString())
-    .gte(
-      "end_at",
-      new Date(now.getTime() - EVENT_END_FALLBACK_HOURS * HOUR_MS).toISOString(),
-    );
+    .gte("end_at", happeningNowEndFloor(now));
 
   const [{ data: events }, { data: liveEvents }, { data: clubOptions }] =
     await Promise.all([
