@@ -70,6 +70,18 @@ export default async function EditEventPage({
 
   if (!event) notFound();
 
+  // A published event with registrations can't go back to draft (the
+  // action checks again). Same aggregate-only RPC as the public event page.
+  let hasRegistrations = false;
+  if (event.status === "published") {
+    const { data: count, error: countError } = await supabase.rpc(
+      "get_event_registration_count",
+      { target_event: event.id },
+    );
+    // If the count can't be read, offer nothing the action would refuse.
+    hasRegistrations = countError ? true : (count ?? 0) > 0;
+  }
+
   const updateWithIds = updateEvent.bind(null, clubId, eventId);
   const cancel = cancelEvent.bind(null, clubId, eventId);
 
@@ -128,6 +140,7 @@ export default async function EditEventPage({
           banner_url: event.banner_url ?? "",
         }}
         status={event.status}
+        hasRegistrations={hasRegistrations}
         recentVenues={recentVenues(venueRows ?? [])}
       />
     </main>

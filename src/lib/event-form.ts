@@ -44,6 +44,10 @@ export type EventFormState = {
   savedMessage: string | null;
 };
 
+/** Shown beside the disabled "Move to draft" and returned by the action. */
+export const MOVE_TO_DRAFT_BLOCKED_MESSAGE =
+  "People have registered, so this event can't go back to draft. Edit or cancel the event instead.";
+
 export const emptyEventValues: EventFormValues = {
   title: "",
   category: "",

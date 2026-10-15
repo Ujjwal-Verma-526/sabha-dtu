@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/Input";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Textarea } from "@/components/ui/Textarea";
 import { CATEGORY_KEYS, categoryLabel } from "@/lib/categories";
+import { MOVE_TO_DRAFT_BLOCKED_MESSAGE } from "@/lib/event-form";
 import type { EventStatus } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import type {
@@ -36,6 +37,8 @@ type EventFormProps = {
   status: EventStatus | null;
   /** The club's recent distinct venues, newest first (recentVenues). */
   recentVenues: string[];
+  /** True once anyone has registered: a published event then can't go back to draft. */
+  hasRegistrations?: boolean;
 };
 
 // Plain chips, not category colours: forms stay plain. Each wraps a real,
@@ -61,6 +64,7 @@ export function EventForm({
   initialValues,
   status,
   recentVenues,
+  hasRegistrations = false,
 }: EventFormProps) {
   const [state, formAction] = useActionState<EventFormState, FormData>(action, {
     error: null,
@@ -361,9 +365,11 @@ export function EventForm({
         </div>
       </section>
 
-      {/* Primary button last in the DOM but shown first on phones: the
-          browser's Enter-to-submit uses the first submit button, so Enter
-          in a field saves a draft rather than publishing. */}
+      {/* Enter in a field submits with the first submit button in the DOM.
+          New events and drafts: "Save draft" comes first (shown second), so
+          Enter never publishes. Published events: "Move to draft" and its
+          confirm are not submit buttons or come later, so Enter is always
+          "Save changes" and the event stays published. */}
       <div className="flex flex-col gap-3 border-t border-line pt-6">
         {status === null || status === "draft" ? (
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -380,7 +386,9 @@ export function EventForm({
               <Button
                 type="button"
                 variant="ghost"
-                aria-expanded={confirmingDraft}
+                disabled={hasRegistrations}
+                aria-expanded={hasRegistrations ? undefined : confirmingDraft}
+                aria-describedby={hasRegistrations ? "move-to-draft-help" : undefined}
                 onClick={() => setConfirmingDraft(true)}
               >
                 Move to draft
@@ -389,7 +397,12 @@ export function EventForm({
                 Save changes
               </SubmitButton>
             </div>
-            {confirmingDraft && (
+            {hasRegistrations && (
+              <p id="move-to-draft-help" className={cn(helpClass, "sm:text-right")}>
+                {MOVE_TO_DRAFT_BLOCKED_MESSAGE}
+              </p>
+            )}
+            {confirmingDraft && !hasRegistrations && (
               <div className="flex flex-col gap-3 rounded-xl bg-soft px-3.5 py-3 sm:flex-row sm:items-center">
                 <p className="mr-auto text-sm text-ink">
                   <span className="font-semibold">Move back to draft?</span> Students won&rsquo;t

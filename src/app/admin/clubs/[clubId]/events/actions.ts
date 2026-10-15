@@ -13,14 +13,17 @@ import {
   isUniqueViolation,
 } from "@/lib/db-errors";
 import { type CategoryKey, isCategoryKey } from "@/lib/categories";
-import type {
-  EventFormIntent,
-  EventFormState,
-  EventFormValues,
+import {
+  MOVE_TO_DRAFT_BLOCKED_MESSAGE,
+  type EventFormIntent,
+  type EventFormState,
+  type EventFormValues,
 } from "@/lib/event-form";
 import { parseIstDateTimeLocal } from "@/lib/ist";
 import { imageUrlError, isOurStorageImageUrl } from "@/lib/storage-url";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { EVENT_END_FALLBACK_HOURS, effectiveEventEnd } from "@/lib/tickets";
 import { slugify } from "@/lib/utils";
 
@@ -119,6 +122,23 @@ const TIME_PATTERN = /^\d{2}:\d{2}$/;
 function istInstant(date: string, time: string): Date | null {
   if (!DATE_PATTERN.test(date) || !TIME_PATTERN.test(time)) return null;
   return parseIstDateTimeLocal(`${date}T${time}`);
+}
+
+// Every registration row is an active one (cancelling deletes the row).
+// get_event_registration_count is the existing aggregate-only RPC. Null
+// when the count can't be read, so the caller can refuse rather than guess.
+async function countRegistrations(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+): Promise<number | null> {
+  const { data, error } = await supabase.rpc("get_event_registration_count", {
+    target_event: eventId,
+  });
+  if (error) {
+    console.error("Counting registrations failed:", error.message);
+    return null;
+  }
+  return data;
 }
 
 // Shared shape/business-rule validation for create and update. The same
@@ -382,6 +402,22 @@ export async function updateEvent(
   }
   const input = parsed.input;
 
+  // Moving to draft is refused once anyone has registered: their tickets
+  // would go on hold and door check-in would stop. A draft with
+  // registrations (from before this rule) may still be saved as a draft.
+  let registeredBefore = 0;
+  if (intent === "draft") {
+    const count = await countRegistrations(supabase, eventId);
+    if (count === null) {
+      return eventFormError(
+        values,
+        {},
+        "Couldn't check registrations for this event. Try again in a moment.",
+      );
+    }
+    registeredBefore = count;
+  }
+
   let query = supabase
     .from("events")
     .update({
@@ -403,7 +439,9 @@ export async function updateEvent(
   // Publishing or moving to draft only applies to a draft or published
   // event, so a stale tab can't revive a cancelled one. Saving alone keeps
   // whatever status the event has.
-  if (intent !== "save") {
+  if (intent === "draft" && registeredBefore > 0) {
+    query = query.eq("status", "draft");
+  } else if (intent !== "save") {
     query = query.in("status", ["draft", "published"]);
   }
   const { data, error } = await query.select("id");
@@ -417,8 +455,39 @@ export async function updateEvent(
       {},
       intent === "save"
         ? NOT_ALLOWED_MESSAGE
-        : "This event can't be changed in its current state. Refresh the page and try again.",
+        : intent === "draft" && registeredBefore > 0
+          ? MOVE_TO_DRAFT_BLOCKED_MESSAGE
+          : "This event can't be changed in its current state. Refresh the page and try again.",
     );
+  }
+
+  // Someone may have registered between the count and the update. Counting
+  // again now catches it: enforce_registration_rules locks the event row
+  // FOR UPDATE and refuses unless it is published, so every registration
+  // either committed before our update (and is counted here) or sees the
+  // draft and is refused. If one slipped in, publish it again.
+  if (intent === "draft" && registeredBefore === 0) {
+    const registeredAfter = await countRegistrations(supabase, eventId);
+    if (registeredAfter !== 0) {
+      const { data: restored, error: restoreError } = await supabase
+        .from("events")
+        .update({ status: "published" })
+        .eq("id", eventId)
+        .eq("club_id", clubId)
+        .eq("status", "draft")
+        .select("id");
+      revalidatePath(`/admin/clubs/${clubId}/events`);
+      revalidatePath(`/admin/clubs/${clubId}/events/${eventId}`);
+      revalidatePath("/events");
+      if (restoreError || restored.length === 0) {
+        return eventFormError(
+          values,
+          {},
+          "Someone registered while you were saving, and the event couldn't be published again. Refresh the page and publish it so their ticket stays active.",
+        );
+      }
+      return eventFormError(values, {}, MOVE_TO_DRAFT_BLOCKED_MESSAGE);
+    }
   }
 
   revalidatePath(`/admin/clubs/${clubId}/events`);
