@@ -13,10 +13,17 @@ import {
   isUniqueViolation,
 } from "@/lib/db-errors";
 import { type CategoryKey, isCategoryKey } from "@/lib/categories";
-import type { EventFormState, EventFormValues } from "@/lib/event-form";
+import {
+  MOVE_TO_DRAFT_BLOCKED_MESSAGE,
+  type EventFormIntent,
+  type EventFormState,
+  type EventFormValues,
+} from "@/lib/event-form";
 import { parseIstDateTimeLocal } from "@/lib/ist";
 import { imageUrlError, isOurStorageImageUrl } from "@/lib/storage-url";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { EVENT_END_FALLBACK_HOURS, effectiveEventEnd } from "@/lib/tickets";
 import { slugify } from "@/lib/utils";
 
@@ -90,12 +97,48 @@ function readEventValues(formData: FormData): EventFormValues {
     category: read("category"),
     description: read("description"),
     venue: read("venue"),
-    start_at: read("start_at"),
-    end_at: read("end_at"),
+    date: read("date"),
+    start_time: read("start_time"),
+    end_time: read("end_time"),
+    ends_different_day: read("ends_different_day") === "on" ? "on" : "",
+    end_date: read("end_date"),
+    deadline_mode: read("deadline_mode") === "custom" ? "custom" : "start",
     registration_deadline: read("registration_deadline"),
     capacity: read("capacity"),
     banner_url: read("banner_url"),
   };
+}
+
+function readIntent(formData: FormData): EventFormIntent {
+  const value = formData.get("intent");
+  return value === "publish" || value === "draft" ? value : "save";
+}
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_PATTERN = /^\d{2}:\d{2}$/;
+
+// The form's date and time values are IST wall-clock times; parsing them
+// with new Date() would use the server's timezone (UTC on Vercel).
+function istInstant(date: string, time: string): Date | null {
+  if (!DATE_PATTERN.test(date) || !TIME_PATTERN.test(time)) return null;
+  return parseIstDateTimeLocal(`${date}T${time}`);
+}
+
+// Every registration row is an active one (cancelling deletes the row).
+// get_event_registration_count is the existing aggregate-only RPC. Null
+// when the count can't be read, so the caller can refuse rather than guess.
+async function countRegistrations(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+): Promise<number | null> {
+  const { data, error } = await supabase.rpc("get_event_registration_count", {
+    target_event: eventId,
+  });
+  if (error) {
+    console.error("Counting registrations failed:", error.message);
+    return null;
+  }
+  return data;
 }
 
 // Shared shape/business-rule validation for create and update. The same
@@ -119,27 +162,52 @@ function parseEventForm(
   }
   if (!values.description) fieldErrors.description = "Description is required.";
   if (!values.venue) fieldErrors.venue = "Venue is required.";
-  if (!values.start_at) fieldErrors.start_at = "Start date/time is required.";
-  if (!values.end_at) fieldErrors.end_at = "End date/time is required.";
+  if (!values.date) {
+    fieldErrors.date = "Pick the date.";
+  } else if (!istInstant(values.date, "00:00")) {
+    fieldErrors.date = "Date is invalid.";
+  }
+  if (!values.start_time) {
+    fieldErrors.start_time = "Start time is required.";
+  } else if (!TIME_PATTERN.test(values.start_time)) {
+    fieldErrors.start_time = "Start time is invalid.";
+  }
+  if (!values.end_time) {
+    fieldErrors.end_time = "End time is required.";
+  } else if (!TIME_PATTERN.test(values.end_time)) {
+    fieldErrors.end_time = "End time is invalid.";
+  }
 
-  // The form's datetime-local values are IST wall-clock times; parsing them
-  // with new Date() would use the server's timezone (UTC on Vercel).
-  const start = parseIstDateTimeLocal(values.start_at);
-  const end = parseIstDateTimeLocal(values.end_at);
-  if (values.start_at && !start) {
-    fieldErrors.start_at = "Start date/time is invalid.";
-  }
-  if (values.end_at && !end) {
-    fieldErrors.end_at = "End date/time is invalid.";
-  }
-  if (start && end && end < start) {
-    fieldErrors.end_at = "End must be after start.";
+  const differentDay = values.ends_different_day === "on";
+  if (differentDay) {
+    if (!values.end_date) {
+      fieldErrors.end_date = "Pick the end date.";
+    } else if (!istInstant(values.end_date, "00:00")) {
+      fieldErrors.end_date = "End date is invalid.";
+    } else if (values.date && values.end_date < values.date) {
+      // Both are YYYY-MM-DD, so string order is date order.
+      fieldErrors.end_date = "End date can't be before the start date.";
+    }
   }
 
+  const start = istInstant(values.date, values.start_time);
+  const end = istInstant(differentDay ? values.end_date : values.date, values.end_time);
+  if (start && end && end <= start && !fieldErrors.end_date) {
+    fieldErrors.end_time =
+      differentDay
+        ? "End must be after start."
+        : "End must be after start. If it runs past midnight, tick “Ends on a different day”.";
+  }
+
+  // "When the event starts" stores no deadline: registration then closes at
+  // start_at (enforce_registration_rules).
   let registrationDeadline: string | null = null;
-  if (values.registration_deadline) {
+  if (values.deadline_mode === "custom") {
     const deadline = parseIstDateTimeLocal(values.registration_deadline);
-    if (!deadline) {
+    if (!values.registration_deadline) {
+      fieldErrors.registration_deadline =
+        "Pick when registration closes, or choose “When the event starts”.";
+    } else if (!deadline) {
       fieldErrors.registration_deadline = "Registration deadline is invalid.";
     } else if (start && end && deadline > effectiveEventEnd(start, end)) {
       fieldErrors.registration_deadline = deadlineAfterEndMessage(start, end);
@@ -193,7 +261,7 @@ function eventFormError(
   fieldErrors: EventFormState["fieldErrors"],
   error: string | null = null,
 ): EventFormState {
-  return { error, fieldErrors, values, saved: false };
+  return { error, fieldErrors, values, savedMessage: null };
 }
 
 // The CHECK constraints are the backstop for the checks in parseEventForm;
@@ -210,13 +278,16 @@ function mapEventDbError(
       });
     }
     if (error.message.includes("events_end_after_start")) {
-      return eventFormError(values, { end_at: "End must be after start." });
+      return eventFormError(values, { end_time: "End must be after start." });
     }
     if (error.message.includes("events_deadline_before_end")) {
       return eventFormError(values, {
         registration_deadline: deadlineAfterEndMessage(
-          parseIstDateTimeLocal(values.start_at),
-          parseIstDateTimeLocal(values.end_at),
+          istInstant(values.date, values.start_time),
+          istInstant(
+            values.ends_different_day === "on" ? values.end_date : values.date,
+            values.end_time,
+          ),
         ),
       });
     }
@@ -242,6 +313,9 @@ export async function createEvent(
   const { supabase, user } = await requireClubManager(clubId);
 
   const values = readEventValues(formData);
+  // "Publish" creates it published in one step; "Save draft" keeps it
+  // private. events_insert_club_manager allows either status.
+  const status = readIntent(formData) === "publish" ? "published" : "draft";
   const parsed = parseEventForm(values);
   if ("fieldErrors" in parsed) {
     return eventFormError(values, parsed.fieldErrors);
@@ -283,6 +357,7 @@ export async function createEvent(
         end_at: input.endAt,
         registration_deadline: input.registrationDeadline,
         capacity: input.capacity,
+        status,
         created_by: user.id,
       })
       .select("id")
@@ -303,10 +378,12 @@ export async function createEvent(
   }
 
   revalidatePath(`/admin/clubs/${clubId}/events`);
+  if (status === "published") revalidatePath("/events");
   redirect(`/admin/clubs/${clubId}/events/${event.id}`);
 }
 
-// Whitelisted fields only — never club_id, status, slug, or created_by.
+// Whitelisted fields only — never club_id, slug, or created_by, and status
+// only as draft <-> published from the submit button that was pressed.
 // RLS (events_update_club_manager) is the real backstop; this whitelist
 // just keeps the form honest, same pattern as admin/clubs/actions.ts.
 export async function updateEvent(
@@ -318,13 +395,30 @@ export async function updateEvent(
   const { supabase } = await requireClubManager(clubId);
 
   const values = readEventValues(formData);
+  const intent = readIntent(formData);
   const parsed = parseEventForm(values);
   if ("fieldErrors" in parsed) {
     return eventFormError(values, parsed.fieldErrors);
   }
   const input = parsed.input;
 
-  const { data, error } = await supabase
+  // Moving to draft is refused once anyone has registered: their tickets
+  // would go on hold and door check-in would stop. A draft with
+  // registrations (from before this rule) may still be saved as a draft.
+  let registeredBefore = 0;
+  if (intent === "draft") {
+    const count = await countRegistrations(supabase, eventId);
+    if (count === null) {
+      return eventFormError(
+        values,
+        {},
+        "Couldn't check registrations for this event. Try again in a moment.",
+      );
+    }
+    registeredBefore = count;
+  }
+
+  let query = supabase
     .from("events")
     .update({
       title: input.title,
@@ -336,35 +430,93 @@ export async function updateEvent(
       end_at: input.endAt,
       registration_deadline: input.registrationDeadline,
       capacity: input.capacity,
+      ...(intent === "save"
+        ? {}
+        : { status: intent === "publish" ? ("published" as const) : ("draft" as const) }),
     })
     .eq("id", eventId)
-    .eq("club_id", clubId)
-    .select("id");
+    .eq("club_id", clubId);
+  // Publishing or moving to draft only applies to a draft or published
+  // event, so a stale tab can't revive a cancelled one. Saving alone keeps
+  // whatever status the event has.
+  if (intent === "draft" && registeredBefore > 0) {
+    query = query.eq("status", "draft");
+  } else if (intent !== "save") {
+    query = query.in("status", ["draft", "published"]);
+  }
+  const { data, error } = await query.select("id");
 
   if (error) {
     return mapEventDbError(error, values, "updating an event");
   }
   if (data.length === 0) {
-    return eventFormError(values, {}, NOT_ALLOWED_MESSAGE);
+    return eventFormError(
+      values,
+      {},
+      intent === "save"
+        ? NOT_ALLOWED_MESSAGE
+        : intent === "draft" && registeredBefore > 0
+          ? MOVE_TO_DRAFT_BLOCKED_MESSAGE
+          : "This event can't be changed in its current state. Refresh the page and try again.",
+    );
+  }
+
+  // Someone may have registered between the count and the update. Counting
+  // again now catches it: enforce_registration_rules locks the event row
+  // FOR UPDATE and refuses unless it is published, so every registration
+  // either committed before our update (and is counted here) or sees the
+  // draft and is refused. If one slipped in, publish it again.
+  if (intent === "draft" && registeredBefore === 0) {
+    const registeredAfter = await countRegistrations(supabase, eventId);
+    if (registeredAfter !== 0) {
+      const { data: restored, error: restoreError } = await supabase
+        .from("events")
+        .update({ status: "published" })
+        .eq("id", eventId)
+        .eq("club_id", clubId)
+        .eq("status", "draft")
+        .select("id");
+      revalidatePath(`/admin/clubs/${clubId}/events`);
+      revalidatePath(`/admin/clubs/${clubId}/events/${eventId}`);
+      revalidatePath("/events");
+      if (restoreError || restored.length === 0) {
+        return eventFormError(
+          values,
+          {},
+          "Someone registered while you were saving, and the event couldn't be published again. Refresh the page and publish it so their ticket stays active.",
+        );
+      }
+      return eventFormError(values, {}, MOVE_TO_DRAFT_BLOCKED_MESSAGE);
+    }
   }
 
   revalidatePath(`/admin/clubs/${clubId}/events`);
   revalidatePath(`/admin/clubs/${clubId}/events/${eventId}`);
   revalidatePath("/events");
-  return { error: null, fieldErrors: {}, values, saved: true };
+  return {
+    error: null,
+    fieldErrors: {},
+    values,
+    savedMessage:
+      intent === "publish"
+        ? "Saved and published."
+        : intent === "draft"
+          ? "Saved as a draft. Students can't see it until you publish."
+          : "Changes saved.",
+  };
 }
 
 async function setEventStatus(
   clubId: string,
   eventId: string,
   from: Array<"draft" | "published">,
-  to: "published" | "cancelled",
+  to: "cancelled",
   action: string,
 ): Promise<ActionState> {
   const { supabase } = await requireClubManager(clubId);
 
   // The status precondition stops, for example, a stale tab from
-  // "publishing" an event that has since been cancelled.
+  // cancelling an event that has since been marked completed.
   const { data, error } = await supabase
     .from("events")
     .update({ status: to })
@@ -387,20 +539,6 @@ async function setEventStatus(
   revalidatePath("/events");
   // The page re-renders with the new status badge, which is the confirmation.
   return idleState;
-}
-
-export async function publishEvent(
-  clubId: string,
-  eventId: string,
-  _previousState: ActionState,
-): Promise<ActionState> {
-  return setEventStatus(
-    clubId,
-    eventId,
-    ["draft"],
-    "published",
-    "publishing an event",
-  );
 }
 
 export async function cancelEvent(
