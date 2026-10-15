@@ -34,7 +34,7 @@ export function TokenEntryForm({ onSubmit }: { onSubmit: (token: string) => Prom
 
   return (
     <form action={formAction} className="flex flex-col gap-2">
-      <label htmlFor="ticket-token" className="text-sm font-medium text-ink">
+      <label htmlFor="ticket-token" className="text-sm font-semibold text-ink">
         Ticket code
       </label>
       <div className="flex gap-2">
@@ -56,7 +56,7 @@ export function TokenEntryForm({ onSubmit }: { onSubmit: (token: string) => Prom
           Check in
         </SubmitButton>
       </div>
-      <p className="text-xs text-ink-soft">
+      <p className="text-[13px] leading-snug text-ink-soft">
         For a handheld scanner, or a code read by another QR app. The short code
         printed under the QR isn&apos;t accepted; search by name instead.
       </p>

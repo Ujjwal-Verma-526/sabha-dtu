@@ -45,7 +45,7 @@ export async function Header() {
           {roles.isSuperAdmin ? (
             <Link href="/admin/clubs" className={manageLinkClass}>
               <Icon name="manage" />
-              Admin
+              Manage
             </Link>
           ) : singleClub && otherClubs.length === 0 ? (
             <Link href={`/admin/clubs/${singleClub.id}`} className={manageLinkClass}>

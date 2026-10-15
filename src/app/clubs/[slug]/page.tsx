@@ -5,8 +5,13 @@ import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
 import { ButtonLink } from "@/components/ui/Button";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { Card } from "@/components/ui/Card";
-import { formatIstDateTime } from "@/lib/ist";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Icon } from "@/components/ui/Icon";
+import { sectionHeadingClass } from "@/components/ui/PageHeader";
+import { DateNumeral } from "@/components/events/DateNumeral";
+import { EventRow, type EventListData } from "@/components/events/EventListItems";
+import { formatIstShortDate, istDayKey, istRelativeDay } from "@/lib/ist";
+import { cn } from "@/lib/utils";
 import { requestToJoin } from "./actions";
 
 export default async function ClubPage({
@@ -37,7 +42,7 @@ export default async function ClubPage({
     await Promise.all([
       supabase
         .from("events")
-        .select("id, title, venue, start_at")
+        .select("id, slug, title, banner_url, venue, start_at, end_at, capacity, category")
         .eq("club_id", club.id)
         .eq("status", "published")
         .gte("start_at", new Date().toISOString())
@@ -61,44 +66,53 @@ export default async function ClubPage({
       (membership.role === "admin" || membership.role === "coordinator")) ||
     profile?.role === "super_admin";
 
+  const now = new Date();
+  const host = { name: club.name, slug: club.slug, verified: club.verified };
+  // Day groups (IST), soonest first, as on /events.
+  const days: { key: string; events: EventListData[] }[] = [];
+  for (const event of events ?? []) {
+    const listed = { ...event, club: host };
+    const key = istDayKey(event.start_at);
+    const last = days[days.length - 1];
+    if (last?.key === key) last.events.push(listed);
+    else days.push({ key, events: [listed] });
+  }
+  const instagram = club.instagram_handle?.replace(/^@/, "");
+
   return (
-    <main className="mx-auto max-w-3xl flex-1 px-6 py-12">
-      <div className="flex items-start gap-4">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-6 pb-16 md:px-8 md:pt-11">
+      <div className="flex items-start gap-4 md:gap-5">
         <ClubLogo
           name={club.name}
           logoUrl={club.logo_url}
-          className="h-20 w-20 shrink-0 text-2xl"
+          className="h-16 w-16 shrink-0 rounded-2xl text-xl md:h-20 md:w-20 md:text-2xl"
         />
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-2xl font-bold text-ink">
-              {club.name}
-            </h1>
+        <div className="min-w-0">
+          <h1 className="text-[28px] leading-[1.12] font-semibold tracking-[-0.035em] break-words text-ink md:text-[36px]">
+            {club.name}
+          </h1>
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13.5px] text-ink-soft">
             {club.verified && <VerifiedBadge />}
-          </div>
-          {club.category && (
-            <p className="mt-1 font-mono text-xs uppercase tracking-wide text-ink-soft">
-              {club.category}
-            </p>
-          )}
-          {club.instagram_handle && (
-            <a
-              href={`https://instagram.com/${club.instagram_handle.replace(/^@/, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 inline-block text-sm text-primary hover:underline"
-            >
-              @{club.instagram_handle.replace(/^@/, "")}
-            </a>
-          )}
+            {club.category && <span>{club.category}</span>}
+            {instagram && (
+              <a
+                href={`https://instagram.com/${instagram}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
+                @{instagram}
+              </a>
+            )}
+          </p>
         </div>
       </div>
 
       {club.description && (
-        <p className="mt-6 text-ink-soft">{club.description}</p>
+        <p className="mt-5 text-[15.5px] leading-relaxed text-ink">{club.description}</p>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
         <MembershipAction
           clubId={club.id}
           slug={club.slug}
@@ -107,51 +121,67 @@ export default async function ClubPage({
         />
         {isManager && (
           <>
-            <ButtonLink
-              href={`/admin/clubs/${club.id}`}
-              variant="ghost"
-              className="text-sm"
-            >
+            <ButtonLink href={`/admin/clubs/${club.id}`} variant="ghost">
+              <Icon name="manage" />
               Manage club
             </ButtonLink>
-            <ButtonLink
-              href={`/admin/clubs/${club.id}/events/new`}
-              variant="ghost"
-              className="text-sm"
-            >
+            <ButtonLink href={`/admin/clubs/${club.id}/events/new`} variant="ghost">
               Create event
             </ButtonLink>
           </>
         )}
       </div>
 
-      <section className="mt-12">
-        <h2 className="font-display text-lg font-semibold text-ink">
+      <section aria-labelledby="upcoming-heading" className="mt-10 md:mt-12">
+        <h2 id="upcoming-heading" className={sectionHeadingClass}>
           Upcoming events
         </h2>
-        {events && events.length > 0 ? (
-          <ul className="mt-4 flex flex-col gap-3">
-            {events.map((event) => (
-              <Card key={event.id}>
-                <p className="font-display font-semibold text-ink">
-                  {event.title}
-                </p>
-                <p className="mt-1 font-mono text-xs text-ink-soft">
-                  {formatIstDateTime(event.start_at)}
-                  {event.venue ? ` · ${event.venue}` : ""}
-                </p>
-              </Card>
-            ))}
-          </ul>
+        {days.length > 0 ? (
+          days.map((day) => (
+            <section
+              key={day.key}
+              aria-label={formatIstShortDate(day.events[0].start_at)}
+              className="mt-4 md:grid md:grid-cols-[112px_minmax(0,1fr)] md:gap-6 md:border-t md:border-line md:pt-5"
+            >
+              <div className="flex items-end gap-2.5 border-b border-line pb-2.5 md:block md:self-start md:border-0 md:pb-0">
+                <DateNumeral
+                  instant={day.events[0].start_at}
+                  className="md:flex-col md:items-start md:gap-2"
+                  numeralClassName="md:text-[56px]"
+                />
+                <span className="ml-auto pb-px text-[13px] text-ink-soft md:mt-2 md:ml-0 md:block">
+                  {istRelativeDay(day.events[0].start_at, now)}
+                </span>
+              </div>
+              <div>
+                {day.events.map((event) => (
+                  <EventRow key={event.slug} event={event} />
+                ))}
+              </div>
+            </section>
+          ))
         ) : (
-          <p className="mt-4 text-sm text-ink-soft">
-            Upcoming events will appear here.
-          </p>
+          <EmptyState
+            icon="calendar"
+            title="No upcoming events"
+            className="mt-3"
+            action={
+              <ButtonLink href="/events" variant="soft">
+                Browse all events
+              </ButtonLink>
+            }
+          >
+            When {club.name} publishes an event, it shows up here.
+          </EmptyState>
         )}
       </section>
     </main>
   );
 }
+
+// Same size as a button, so it lines up with "Manage club" beside it.
+const statusPillClass =
+  "inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-[15px] font-semibold";
 
 function MembershipAction({
   clubId,
@@ -166,7 +196,7 @@ function MembershipAction({
 }) {
   if (!isSignedIn) {
     return (
-      <ButtonLink href="/login" variant="ghost" className="text-sm">
+      <ButtonLink href="/login" variant="ghost">
         Sign in to request to join
       </ButtonLink>
     );
@@ -174,7 +204,8 @@ function MembershipAction({
 
   if (status === "approved") {
     return (
-      <span className="rounded-full border border-line px-4 py-2 text-sm text-ink-soft">
+      <span className={cn(statusPillClass, "bg-success-soft text-success")}>
+        <Icon name="check" strokeWidth={2.4} />
         Member
       </span>
     );
@@ -182,7 +213,8 @@ function MembershipAction({
 
   if (status === "pending") {
     return (
-      <span className="rounded-full border border-line px-4 py-2 text-sm text-ink-soft">
+      <span className={cn(statusPillClass, "bg-soft text-ink-soft")}>
+        <Icon name="clock" />
         Request pending
       </span>
     );
@@ -192,7 +224,7 @@ function MembershipAction({
 
   return (
     <ActionForm action={joinWithArgs}>
-      <SubmitButton variant="primary" className="text-sm" pendingLabel="Sending…">
+      <SubmitButton variant="primary" pendingLabel="Sending…">
         {status === "rejected" ? "Request again" : "Request to join"}
       </SubmitButton>
     </ActionForm>

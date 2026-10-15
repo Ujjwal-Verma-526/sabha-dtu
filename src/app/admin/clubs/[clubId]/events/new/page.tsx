@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { NotManager } from "@/components/layout/ManageNotice";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { EventForm } from "@/components/events/EventForm";
 import { emptyEventValues } from "@/lib/event-form";
 import { createEvent } from "../actions";
@@ -38,29 +40,26 @@ export default async function NewEventPage({
     (membership.role === "admin" || membership.role === "coordinator");
 
   if (!isSuperAdmin && !isManager) {
-    return (
-      <main className="mx-auto max-w-lg flex-1 px-6 py-16 text-center">
-        <p className="text-ink-soft">You don&apos;t manage this club.</p>
-      </main>
-    );
+    return <NotManager />;
   }
 
   const createWithClub = createEvent.bind(null, clubId);
 
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-6 py-12">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-5 pb-16 md:px-8 md:pt-10">
       <Breadcrumbs
         items={[
-          ...(isSuperAdmin ? [{ label: "Admin", href: "/admin/clubs" }] : []),
+          ...(isSuperAdmin ? [{ label: "Manage", href: "/admin/clubs" }] : []),
           { label: club.name, href: `/admin/clubs/${clubId}` },
           { label: "Events", href: `/admin/clubs/${clubId}/events` },
           { label: "New event" },
         ]}
       />
-      <h1 className="font-display text-2xl font-bold text-ink">New event</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Saves as a draft first — nothing is public until you publish it.
-      </p>
+      <PageHeader
+        size="md"
+        title="New event"
+        description={`For ${club.name}. It saves as a draft first, so nothing is public until you publish it.`}
+      />
 
       <EventForm
         clubId={clubId}

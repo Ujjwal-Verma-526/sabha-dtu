@@ -51,6 +51,20 @@ const paths = {
   arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
   arrowLeft: <path d="M19 12H5M11 6l-6 6 6 6" />,
   filter: <path d="M4 6h16M7 12h10M10 18h4" />,
+  image: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <circle cx="9" cy="9.5" r="1.8" />
+      <path d="m4 17 5-4.5 3.5 3 3-2.5 4.5 4" />
+    </>
+  ),
+  plus: <path d="M12 5v14M5 12h14" />,
+  scan: (
+    <>
+      <path d="M4 8.5V6a2 2 0 0 1 2-2h2.5M15.5 4H18a2 2 0 0 1 2 2v2.5M20 15.5V18a2 2 0 0 1-2 2h-2.5M8.5 20H6a2 2 0 0 1-2-2v-2.5" />
+      <path d="M4 12h16" />
+    </>
+  ),
   manage: (
     <>
       <circle cx="12" cy="12" r="3" />

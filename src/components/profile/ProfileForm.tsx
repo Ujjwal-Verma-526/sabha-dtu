@@ -2,6 +2,14 @@
 
 import { useActionState } from "react";
 import { Input } from "@/components/ui/Input";
+import {
+  FieldError,
+  FormNotice,
+  fieldStackClass,
+  helpClass,
+  labelClass,
+  labelHintClass,
+} from "@/components/ui/Field";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
   BATCH_YEAR_MAX,
@@ -20,15 +28,6 @@ type ProfileFormProps = {
   initialValues: ProfileFormValues;
 };
 
-function FieldError({ name, message }: { name: string; message?: string }) {
-  if (!message) return null;
-  return (
-    <span id={`${name}-error`} role="alert" className="text-xs text-danger">
-      {message}
-    </span>
-  );
-}
-
 export function ProfileForm({ action, initialValues }: ProfileFormProps) {
   const [state, formAction] = useActionState<ProfileFormState, FormData>(
     action,
@@ -36,34 +35,21 @@ export function ProfileForm({ action, initialValues }: ProfileFormProps) {
   );
   const { values, fieldErrors } = state;
 
-  // Props that tie an input to its error message.
+  // Props that tie an input to its error message. Input turns its own
+  // border red when aria-invalid is set.
   const invalid = (name: ProfileFieldName) => ({
     "aria-invalid": Boolean(fieldErrors[name]),
     "aria-describedby": fieldErrors[name] ? `${name}-error` : undefined,
-    className: fieldErrors[name] ? "border-danger" : undefined,
   });
+  const optional = <span className={labelHintClass}> · optional</span>;
 
   return (
-    <form action={formAction} className="mt-6 flex flex-col gap-4">
-      {state.error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-danger-line bg-danger-soft px-3 py-2 text-sm text-danger"
-        >
-          {state.error}
-        </p>
-      )}
-      {state.saved && (
-        <p
-          role="status"
-          className="rounded-lg border border-success/30 bg-success-soft px-3 py-2 text-sm text-success"
-        >
-          Saved
-        </p>
-      )}
+    <form action={formAction} className="mt-3 flex flex-col gap-5">
+      {state.error && <FormNotice tone="error">{state.error}</FormNotice>}
+      {state.saved && <FormNotice tone="success">Saved</FormNotice>}
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink">Name</span>
+      <label className={fieldStackClass}>
+        <span className={labelClass}>Name</span>
         <Input
           name="name"
           required
@@ -71,56 +57,59 @@ export function ProfileForm({ action, initialValues }: ProfileFormProps) {
           defaultValue={values.name}
           {...invalid("name")}
         />
-        <FieldError name="name" message={fieldErrors.name} />
+        <FieldError id="name-error" message={fieldErrors.name} />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink">Roll number</span>
-        <Input
-          name="roll_number"
-          maxLength={PROFILE_MAX_LENGTH.roll_number}
-          defaultValue={values.roll_number}
-          {...invalid("roll_number")}
-        />
-        <FieldError name="roll_number" message={fieldErrors.roll_number} />
-      </label>
+      <div className="grid gap-5 sm:grid-cols-2 sm:gap-4">
+        <label className={fieldStackClass}>
+          <span className={labelClass}>Roll number{optional}</span>
+          <Input
+            name="roll_number"
+            maxLength={PROFILE_MAX_LENGTH.roll_number}
+            defaultValue={values.roll_number}
+            {...invalid("roll_number")}
+          />
+          <FieldError id="roll_number-error" message={fieldErrors.roll_number} />
+        </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink">Branch</span>
+        <label className={fieldStackClass}>
+          <span className={labelClass}>Batch year{optional}</span>
+          <Input
+            name="batch_year"
+            type="number"
+            min={BATCH_YEAR_MIN}
+            max={BATCH_YEAR_MAX}
+            defaultValue={values.batch_year}
+            {...invalid("batch_year")}
+          />
+          <FieldError id="batch_year-error" message={fieldErrors.batch_year} />
+        </label>
+      </div>
+
+      <label className={fieldStackClass}>
+        <span className={labelClass}>Branch{optional}</span>
         <Input
           name="branch"
           maxLength={PROFILE_MAX_LENGTH.branch}
           defaultValue={values.branch}
           {...invalid("branch")}
         />
-        <FieldError name="branch" message={fieldErrors.branch} />
+        <FieldError id="branch-error" message={fieldErrors.branch} />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink">Batch year</span>
-        <Input
-          name="batch_year"
-          type="number"
-          min={BATCH_YEAR_MIN}
-          max={BATCH_YEAR_MAX}
-          defaultValue={values.batch_year}
-          {...invalid("batch_year")}
-        />
-        <FieldError name="batch_year" message={fieldErrors.batch_year} />
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink">Avatar URL</span>
+      <label className={fieldStackClass}>
+        <span className={labelClass}>Avatar URL{optional}</span>
         <Input
           name="avatar_url"
           maxLength={PROFILE_MAX_LENGTH.avatar_url}
           defaultValue={values.avatar_url}
           {...invalid("avatar_url")}
         />
-        <FieldError name="avatar_url" message={fieldErrors.avatar_url} />
+        <span className={helpClass}>A link to a picture of you, starting with https://.</span>
+        <FieldError id="avatar_url-error" message={fieldErrors.avatar_url} />
       </label>
 
-      <SubmitButton variant="primary" className="mt-2" pendingLabel="Saving…">
+      <SubmitButton variant="primary" className="w-full sm:w-auto sm:self-start" pendingLabel="Saving…">
         Save changes
       </SubmitButton>
     </form>

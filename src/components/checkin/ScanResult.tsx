@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Button } from "@/components/ui/Button";
 import type { ResultTone, ResultView } from "@/lib/check-in";
 import { cn } from "@/lib/utils";
 
@@ -19,28 +18,22 @@ const VIBRATION: Record<ResultTone, number[]> = {
   error: [200, 80, 200],
 };
 
+// Solid panels, readable at arm's length: the colour is a second signal,
+// never the only one. Every result also has its own icon shape and a
+// written title ("Checked in", "Already checked in", "Not a valid ticket").
 const toneClass: Record<ResultTone, string> = {
-  success: "border-success/30 bg-success-soft text-success",
-  warning: "border-warning/30 bg-warning-soft text-warning",
-  error: "border-danger-line bg-danger-soft text-danger",
-};
-
-const iconClass: Record<ResultTone, string> = {
-  success: "bg-green-600",
-  warning: "bg-amber-500",
-  error: "bg-red-600",
+  success: "bg-success text-on-success",
+  warning: "bg-warning text-on-warning",
+  error: "bg-danger text-on-danger",
 };
 
 function ToneIcon({ tone }: { tone: ResultTone }) {
   return (
     <span
       aria-hidden="true"
-      className={cn(
-        "flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white",
-        iconClass[tone],
-      )}
+      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-[3px] border-current md:h-20 md:w-20"
     >
-      <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" className="h-9 w-9 md:h-11 md:w-11" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
         {tone === "success" && <path d="M5 12.5l4.5 4.5L19 7.5" />}
         {tone === "warning" && (
           <>
@@ -84,22 +77,28 @@ export function ScanResult({
       {result && (
         <div
           className={cn(
-            "mb-4 flex flex-col gap-4 rounded-2xl border-2 p-5",
+            "mb-4 flex flex-col gap-5 rounded-2xl p-5 shadow-card md:p-6",
             toneClass[result.view.tone],
           )}
         >
           <div className="flex items-center gap-4">
             <ToneIcon tone={result.view.tone} />
             <div className="min-w-0">
-              <p className="font-display text-2xl font-bold leading-tight">
+              <p className="text-[30px] leading-[1.05] font-bold tracking-[-0.025em] md:text-[38px]">
                 {result.view.title}
               </p>
-              <p className="mt-1 break-words text-base font-medium">{result.view.message}</p>
+              <p className="mt-1.5 text-xl leading-snug font-semibold break-words md:text-2xl">
+                {result.view.message}
+              </p>
             </div>
           </div>
-          <Button type="button" variant="ghost" className="w-full" onClick={onDismiss}>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="min-h-12 w-full rounded-xl border-2 border-current text-base font-semibold focus-visible:outline-current"
+          >
             Scan next
-          </Button>
+          </button>
         </div>
       )}
     </div>

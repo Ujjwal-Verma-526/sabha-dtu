@@ -11,8 +11,13 @@
  *   belong to event content only. Forms, tickets and the door scanner don't
  *   use them.
  * - Text pairs are WCAG AA in both themes; control borders are 3:1.
+ *
+ * .theme-light pins an element and everything in it to the light values in
+ * both themes: the ticket card is always white with a black QR, so it scans
+ * the same in daylight and in dark mode.
  */
-:root {
+:root,
+.theme-light {
   color-scheme: light dark;
 
   --paper: #ffffff;
@@ -31,11 +36,14 @@
 
   --success: #12723f;
   --success-soft: #e3f5ea;
+  --on-success: #ffffff;
   --warning: #8a4b00;
   --warning-soft: #fff1dc;
+  --on-warning: #ffffff;
   --danger: #b42318;
   --danger-soft: #fef0ee;
   --danger-line: #f1b1aa;
+  --on-danger: #ffffff;
 
   --saffron: #ff9933;
 
@@ -75,11 +83,14 @@
 
     --success: #4ade80;
     --success-soft: #10291a;
+    --on-success: #0d0d10;
     --warning: #f5b454;
     --warning-soft: #2e2210;
+    --on-warning: #0d0d10;
     --danger: #ff8a80;
     --danger-soft: #2c1414;
     --danger-line: #6b2b27;
+    --on-danger: #0d0d10;
 
     --live-text: #ff7ab0;
     /* deeper, less glaring tiles at night */
@@ -90,6 +101,12 @@
 
     --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 30px -14px rgb(0 0 0 / 0.7);
   }
+}
+
+.theme-light {
+  color-scheme: light;
+  background: var(--surface);
+  color: var(--ink);
 }
 
 @theme inline {
@@ -107,11 +124,14 @@
   --color-primary-soft-ink: var(--primary-soft-ink);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
+  --color-on-success: var(--on-success);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
+  --color-on-warning: var(--on-warning);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-danger-line: var(--danger-line);
+  --color-on-danger: var(--on-danger);
   --color-saffron: var(--saffron);
   --color-live: var(--live);
   --color-on-live: var(--on-live);

@@ -63,12 +63,15 @@ Sabha is a DTU-first society/event management web app.
 
 ## UI (Sabha v1)
 
-- Built in four PRs (A: foundation, /events, event page; B: fixed event categories; C: tickets, profile, clubs, admin, scan, landing, login, legal, 404; D: event form behaviour). Mockups live in the gitignored `design-previews/sabha-v1/`.
+- Built in four PRs (A: foundation, /events, event page; B: fixed event categories; C: tickets, profile, clubs, admin, scan, login, legal, 404 (landing untouched); D: event form behaviour). Mockups live in the gitignored `design-previews/sabha-v1/`.
 - Tokens are CSS variables in `src/app/globals.css`, exposed to Tailwind via `@theme inline`. Light and dark follow `prefers-color-scheme`; there is no toggle. Use the tokens (`paper`, `surface`, `soft`, `ink`, `ink-soft`, `line`, `control`, `primary`, `on-primary`, `success`, `warning`, `danger`, ...), never raw Tailwind palette colours, or dark mode breaks. Text on `primary` is `text-on-primary` (dark text in dark mode).
 - One accent: violet `primary` for buttons, links and focus. Saffron is only the wordmark dot, never a button or link.
 - Festival colours (category colours, auto-posters, the When/Where/Spots tiles, rani-pink "live") are for event content only. Forms, tickets and the door scanner stay plain. Category colours come from `src/lib/categories.ts` (`categoryKey`, `categoryColor`, `categoryInk`), keyed by the event's own `events.category` (never the club's free-text category). Rani pink means "live" and nothing else.
 - Fonts via `next/font/google`: Geist (UI), Bricolage Grotesque with the `wdth` axis (display headings and date numerals, `.font-display-tight`), Geist Mono (ticket references).
-- Pages that hide the phone tab bar (`HIDDEN_ON` in `src/components/layout/NavLinks.tsx`, today only the event page) get the header back arrow (`BackLink`): history back after an in-app navigation, otherwise `/events`.
+- Pages that hide the phone tab bar (`HIDDEN_ON` in `src/components/layout/NavLinks.tsx`: the event page and the door scanner) get the header back arrow (`BackLink`): history back after an in-app navigation, otherwise the page's fallback (`/events`, or the event's manage page for the scanner).
+- `.theme-light` (globals.css) pins an element's tokens to the light values in both themes. The ticket card uses it, so it's a white card with a black QR (`src/lib/qr.ts`) in dark mode too.
+- Solid status fills use `bg-success`/`bg-warning`/`bg-danger` with `text-on-success`/`text-on-warning`/`text-on-danger` (white in light, near-black in dark). The door scanner's result panels and `Button variant="dangerSolid"` use them; each result also has a written title and its own icon shape, never colour alone.
+- Plain pages share `PageHeader`/`sectionHeadingClass` (`src/components/ui/PageHeader.tsx`), `EmptyState`/`NoticePage`, and the form pieces in `src/components/ui/Field.tsx` (`FieldError`, `FormNotice`, label/help classes). Geist Mono is for ticket references and the scanner's token field only.
 - There's no tailwind-merge: a className that conflicts with a component's own classes wins or loses by CSS order. Wrap the element or add a variant instead.
 - Every text pair must pass WCAG AA in both themes; control borders 3:1.
 
@@ -119,8 +122,10 @@ Known and accepted by the user (2026-10-12). Don't "fix" these without being ask
 
 - Sabha v1 PR A (PR #18): tokens, fonts, light/dark, shared components, header with phone tab bar, `/events` and the event page.
 
-**In review (branch `feat/event-categories`):**
-- Sabha v1 PR B: fixed event categories, migration `20260904000001_event_categories`, required category chips in the event form, posters/dots/filter on `/events` and the event page from the event's own category.
+- Sabha v1 PR B (PR #19): fixed event categories, migration `20260904000001_event_categories`, required category chips in the event form, posters/dots/filter on `/events` and the event page from the event's own category.
+
+**In review (branch `feat/ui-screens`):**
+- Sabha v1 PR C: visual restyle of tickets (white ticket card with the attendee's own name, read from their `users` row), `/profile`, `/clubs`, club page (PR A event rows; its events select widened), manage pages and event form (visual only), door scanner (solid result panels, tab bar hidden), login, privacy, terms, 404. Header "Admin" renamed "Manage". No data, RLS or migration changes.
 
 The deferrals on RSVP/registration, QR tickets and door check-in are all lifted (user's explicit instructions, 2026-10-08 and 2026-10-11).
 

@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ClubCard } from "@/components/clubs/ClubCard";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { toIlikeSearchTerm } from "@/lib/search";
 import { cn } from "@/lib/utils";
 
@@ -47,40 +51,47 @@ export default async function ClubsPage({
     new Set((allVerified ?? []).map((c) => c.category).filter(Boolean)),
   ) as string[];
 
-  return (
-    <main className="mx-auto max-w-6xl flex-1 px-6 py-12">
-      <h1 className="font-display text-3xl font-bold text-ink">Clubs</h1>
-      <p className="mt-2 text-ink-soft">
-        DTU societies, verified and listed by the Sabha team.
-      </p>
+  const chipClass = (on: boolean) =>
+    cn(
+      "inline-flex h-9 shrink-0 items-center rounded-full px-3.5 text-sm font-medium transition-colors",
+      on ? "bg-ink text-paper" : "bg-soft text-ink hover:bg-line",
+    );
 
-      <form method="get" className="mt-8 flex gap-3">
-        <input
+  return (
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-16 md:px-8 md:pt-11">
+      <PageHeader
+        title="Clubs"
+        description="DTU societies, verified and listed by the Sabha team."
+      />
+
+      <form method="get" role="search" className="mt-6 flex max-w-md gap-2">
+        <label htmlFor="club-search" className="sr-only">
+          Search clubs
+        </label>
+        <Input
+          id="club-search"
           type="search"
           name="q"
           defaultValue={q ?? ""}
-          placeholder="Search clubs…"
-          className="w-full max-w-sm rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+          placeholder="Search clubs"
+          className="min-w-0 flex-1"
         />
         {category && <input type="hidden" name="category" value={category} />}
-        <button
-          type="submit"
-          className="rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink hover:border-primary"
-        >
+        <Button type="submit" variant="ghost" className="min-h-12 shrink-0">
           Search
-        </button>
+        </Button>
       </form>
 
       {categories.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div
+          role="group"
+          aria-label="Filter by category"
+          className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0"
+        >
           <Link
             href={q ? `/clubs?q=${encodeURIComponent(q)}` : "/clubs"}
-            className={cn(
-              "rounded-full border px-3 py-1 font-mono text-xs uppercase tracking-wide",
-              !category
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-line text-ink-soft hover:border-primary",
-            )}
+            aria-current={!category ? "true" : undefined}
+            className={chipClass(!category)}
           >
             All
           </Link>
@@ -92,12 +103,8 @@ export default async function ClubsPage({
               <Link
                 key={c}
                 href={`/clubs?${params.toString()}`}
-                className={cn(
-                  "rounded-full border px-3 py-1 font-mono text-xs uppercase tracking-wide",
-                  category === c
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-line text-ink-soft hover:border-primary",
-                )}
+                aria-current={category === c ? "true" : undefined}
+                className={chipClass(category === c)}
               >
                 {c}
               </Link>
@@ -107,22 +114,28 @@ export default async function ClubsPage({
       )}
 
       {clubs && clubs.length > 0 ? (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid md:grid-cols-2 md:gap-x-12">
           {clubs.map((club) => (
             <ClubCard key={club.slug} club={club} />
           ))}
         </div>
       ) : (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <p className="font-display text-lg font-semibold text-ink">
-            No clubs match yet.
-          </p>
-          <p className="max-w-sm text-sm text-ink-soft">
-            {q || category
-              ? "Try a different search or clear the filter."
-              : "Verified DTU societies will show up here once they're added."}
-          </p>
-        </div>
+        <EmptyState
+          icon="clubs"
+          title={q || category ? "No clubs match" : "No clubs yet"}
+          className="mt-8"
+          action={
+            (q || category) && (
+              <ButtonLink href="/clubs" variant="soft">
+                Clear search
+              </ButtonLink>
+            )
+          }
+        >
+          {q || category
+            ? "Try a different search or clear the filter."
+            : "Verified DTU societies will show up here once they're added."}
+        </EmptyState>
       )}
     </main>
   );

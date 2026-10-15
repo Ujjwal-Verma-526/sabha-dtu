@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ClubLogo } from "./ClubLogo";
 import { VerifiedBadge } from "./VerifiedBadge";
 
+/** One society in the /clubs directory: logo, name with the verified tick, category, blurb. */
 export function ClubCard({
   club,
 }: {
@@ -17,33 +18,25 @@ export function ClubCard({
   return (
     <Link
       href={`/clubs/${club.slug}`}
-      className="group flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-primary"
+      className="group flex items-start gap-3.5 border-b border-line py-4"
     >
-      <div className="flex items-start gap-3">
-        <ClubLogo
-          name={club.name}
-          logoUrl={club.logo_url}
-          className="h-12 w-12 shrink-0 text-base"
-        />
-        <div className="min-w-0">
-          <h3 className="truncate font-display text-base font-semibold text-ink group-hover:text-primary">
+      <ClubLogo
+        name={club.name}
+        logoUrl={club.logo_url}
+        className="h-12 w-12 shrink-0 text-base"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate font-semibold tracking-[-0.01em] text-ink group-hover:text-primary">
             {club.name}
-          </h3>
-          {club.category && (
-            <p className="font-mono text-xs uppercase tracking-wide text-ink-soft">
-              {club.category}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {club.description && (
-        <p className="line-clamp-2 text-sm text-ink-soft">
-          {club.description}
+          </span>
+          {club.verified && <VerifiedBadge label={false} />}
         </p>
-      )}
-
-      {club.verified && <VerifiedBadge className="self-start" />}
+        {club.category && <p className="text-[13px] text-ink-soft">{club.category}</p>}
+        {club.description && (
+          <p className="mt-1 line-clamp-2 text-[13.5px] text-ink-soft">{club.description}</p>
+        )}
+      </div>
     </Link>
   );
 }

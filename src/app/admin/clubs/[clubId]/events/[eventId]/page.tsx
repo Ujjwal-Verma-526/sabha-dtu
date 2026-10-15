@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { ButtonLink } from "@/components/ui/Button";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { NotManager } from "@/components/layout/ManageNotice";
+import { Icon } from "@/components/ui/Icon";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { EventForm } from "@/components/events/EventForm";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
@@ -43,11 +46,7 @@ export default async function EditEventPage({
     (membership.role === "admin" || membership.role === "coordinator");
 
   if (!isSuperAdmin && !isManager) {
-    return (
-      <main className="mx-auto max-w-lg flex-1 px-6 py-16 text-center">
-        <p className="text-ink-soft">You don&apos;t manage this club.</p>
-      </main>
-    );
+    return <NotManager />;
   }
 
   const { data: event } = await supabase
@@ -66,59 +65,47 @@ export default async function EditEventPage({
   const cancel = cancelEvent.bind(null, clubId, eventId);
 
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-6 py-12">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <Breadcrumbs
-            items={[
-              ...(isSuperAdmin ? [{ label: "Admin", href: "/admin/clubs" }] : []),
-              { label: club.name, href: `/admin/clubs/${clubId}` },
-              { label: "Events", href: `/admin/clubs/${clubId}/events` },
-              { label: event.title },
-            ]}
-          />
-          <h1 className="font-display text-2xl font-bold text-ink">
-            {event.title}
-          </h1>
-        </div>
-        <EventStatusBadge status={event.status} />
-      </div>
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-5 pb-16 md:px-8 md:pt-10">
+      <Breadcrumbs
+        items={[
+          ...(isSuperAdmin ? [{ label: "Manage", href: "/admin/clubs" }] : []),
+          { label: club.name, href: `/admin/clubs/${clubId}` },
+          { label: "Events", href: `/admin/clubs/${clubId}/events` },
+          { label: event.title },
+        ]}
+      />
+      <EventStatusBadge status={event.status} />
+      <PageHeader size="md" className="mt-2" title={event.title} />
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        {event.status === "draft" && (
-          <ActionForm action={publish}>
-            <SubmitButton
-              variant="primary"
-              className="text-sm"
-              pendingLabel="Publishing…"
+      {(event.status === "draft" || event.status === "published") && (
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {event.status === "draft" && (
+            <ActionForm action={publish}>
+              <SubmitButton variant="primary" pendingLabel="Publishing…">
+                Publish
+              </SubmitButton>
+            </ActionForm>
+          )}
+          {event.status === "published" && (
+            <ButtonLink href={`/admin/clubs/${clubId}/events/${eventId}/scan`}>
+              <Icon name="scan" />
+              Scan tickets
+            </ButtonLink>
+          )}
+          {event.status === "published" && (
+            <a
+              href={`/events/${event.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-control bg-surface px-4 text-[15px] font-semibold text-ink hover:border-ink"
             >
-              Publish
-            </SubmitButton>
-          </ActionForm>
-        )}
-        {(event.status === "draft" || event.status === "published") && (
+              Public page
+              <Icon name="arrowRight" />
+            </a>
+          )}
           <CancelEventButton cancelAction={cancel} />
-        )}
-        {event.status === "published" && (
-          <ButtonLink
-            href={`/admin/clubs/${clubId}/events/${eventId}/scan`}
-            variant="primary"
-            className="text-sm"
-          >
-            Scan tickets
-          </ButtonLink>
-        )}
-        {event.status === "published" && (
-          <a
-            href={`/events/${event.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-primary hover:underline"
-          >
-            View public page →
-          </a>
-        )}
-      </div>
+        </div>
+      )}
 
       <EventForm
         clubId={clubId}

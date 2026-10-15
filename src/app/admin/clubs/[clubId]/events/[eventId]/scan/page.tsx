@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { CheckInConsole } from "@/components/checkin/CheckInConsole";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { NotManager } from "@/components/layout/ManageNotice";
+import { Icon } from "@/components/ui/Icon";
 import { loginPathFor } from "@/lib/auth-redirect";
 import { describeWindow, getWindowStatus } from "@/lib/check-in";
 import { formatIstDateTime, formatIstTime, isSameIstDay } from "@/lib/ist";
@@ -54,11 +56,7 @@ export default async function ScanTicketsPage({
     (membership.role === "admin" || membership.role === "coordinator");
 
   if (!isSuperAdmin && !isManager) {
-    return (
-      <main className="mx-auto max-w-lg flex-1 px-6 py-16 text-center">
-        <p className="text-ink-soft">You don&apos;t manage this club.</p>
-      </main>
-    );
+    return <NotManager />;
   }
 
   const { data: event, error: eventError } = await supabase
@@ -82,10 +80,10 @@ export default async function ScanTicketsPage({
     : formatIstDateTime(event.end_at);
 
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-4 py-8 sm:px-6 sm:py-12">
+    <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-5 pb-16 md:pt-10">
       <Breadcrumbs
         items={[
-          ...(isSuperAdmin ? [{ label: "Admin", href: "/admin/clubs" }] : []),
+          ...(isSuperAdmin ? [{ label: "Manage", href: "/admin/clubs" }] : []),
           { label: club.name, href: `/admin/clubs/${clubId}` },
           { label: "Events", href: `/admin/clubs/${clubId}/events` },
           { label: event.title, href: `/admin/clubs/${clubId}/events/${eventId}` },
@@ -95,9 +93,11 @@ export default async function ScanTicketsPage({
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-ink">Scan tickets</h1>
-          <p className="mt-1 break-words font-medium text-ink">{event.title}</p>
-          <p className="mt-1 font-mono text-xs text-ink-soft">
+          <h1 className="text-[26px] leading-[1.15] font-semibold tracking-[-0.035em] text-ink md:text-[32px]">
+            Scan tickets
+          </h1>
+          <p className="mt-1 font-semibold break-words text-ink">{event.title}</p>
+          <p className="mt-0.5 text-[13.5px] text-ink-soft">
             {/* nowrap per side, so a narrow screen breaks at the dash. */}
             <span className="whitespace-nowrap">{formatIstDateTime(event.start_at)} –</span>{" "}
             <span className="whitespace-nowrap">{endLabel}</span>
@@ -109,16 +109,17 @@ export default async function ScanTicketsPage({
 
       <p
         className={cn(
-          "mt-4 rounded-xl border px-4 py-3 text-sm",
+          "mt-4 flex items-start gap-2 rounded-xl border px-3.5 py-3 text-sm font-semibold",
           windowStatus.kind === "open"
             ? "border-success/30 bg-success-soft text-success"
             : "border-warning/30 bg-warning-soft text-warning",
         )}
       >
+        <Icon name={windowStatus.kind === "open" ? "check" : "clock"} strokeWidth={2.2} className="mt-px text-lg" />
         {describeWindow(windowStatus, now)}
       </p>
 
-      <div className="mt-6">
+      <div className="mt-5">
         <CheckInConsole
           eventId={event.id}
           initialRows={rows}

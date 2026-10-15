@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { formatCheckInTime, type CheckInListRow } from "@/lib/check-in";
@@ -37,14 +38,20 @@ function ManualRow({
     <li className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="break-words font-medium text-ink">{row.name}</p>
-          <p className={cn("font-mono text-xs", checkedIn ? "text-success" : "text-ink-soft")}>
+          <p className="text-[17px] font-semibold break-words text-ink">{row.name}</p>
+          <p
+            className={cn(
+              "mt-0.5 flex items-center gap-1 text-[13.5px]",
+              checkedIn ? "font-semibold text-success" : "font-medium text-ink-soft",
+            )}
+          >
+            {checkedIn && <Icon name="check" strokeWidth={2.6} />}
             {statusLine(row, new Date())}
           </p>
         </div>
         {!checkedIn ? (
           <form action={async () => onCheckIn(row.registration_id)} className="shrink-0">
-            <SubmitButton className="px-4 py-2 text-sm" pendingLabel="Checking in…">
+            <SubmitButton pendingLabel="Checking in…">
               Check in
             </SubmitButton>
           </form>
@@ -53,7 +60,7 @@ function ManualRow({
             <Button
               type="button"
               variant="ghost"
-              className="shrink-0 px-4 py-2 text-sm"
+              className="shrink-0"
               onClick={() => setConfirmingUndo(true)}
             >
               Undo
@@ -63,14 +70,9 @@ function ManualRow({
       </div>
 
       {checkedIn && confirmingUndo && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-ink-soft">Undo this check-in?</span>
-          <Button
-            type="button"
-            variant="ghost"
-            className="px-4 py-2 text-sm"
-            onClick={() => setConfirmingUndo(false)}
-          >
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-danger-soft px-3 py-2.5">
+          <span className="mr-auto text-sm font-semibold text-danger">Undo this check-in?</span>
+          <Button type="button" variant="ghost" onClick={() => setConfirmingUndo(false)}>
             No
           </Button>
           <form
@@ -79,10 +81,7 @@ function ManualRow({
               setConfirmingUndo(false);
             }}
           >
-            <SubmitButton
-              className="bg-red-600 px-4 py-2 text-sm hover:bg-red-700"
-              pendingLabel="Undoing…"
-            >
+            <SubmitButton variant="dangerSolid" pendingLabel="Undoing…">
               Yes, undo
             </SubmitButton>
           </form>
@@ -117,7 +116,7 @@ export function ManualCheckInList({
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={inputId} className="text-sm font-medium text-ink">
+      <label htmlFor={inputId} className="text-sm font-semibold text-ink">
         Find by name
       </label>
       <Input
@@ -132,7 +131,7 @@ export function ManualCheckInList({
 
       {folded.length >= MIN_QUERY_LENGTH && (
         <>
-          <p className="text-xs text-ink-soft" role="status">
+          <p className="text-[13px] text-ink-soft" role="status">
             {matches.length === 0
               ? "No registrant matches that name."
               : matches.length > MAX_ROWS
