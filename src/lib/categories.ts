@@ -48,3 +48,19 @@ export function categoryColor(key: CategoryKey): string {
 export function categoryInk(key: CategoryKey): string {
   return key === "entrepreneurship" ? "#1c1326" : "#ffffff";
 }
+
+// The auto-poster's colours as literal values, for the generated share image
+// (src/app/events/[slug]/poster.png), which is drawn outside CSS and can't
+// read the --cat-* variables. They mirror --cat-* and .poster-* in
+// globals.css (light-mode values); change both together.
+const POSTER_COLORS: Record<CategoryKey, { bg: string; fg: string }> = {
+  technical: { bg: "#1a5fb4", fg: "#ffffff" },
+  cultural: { bg: "#c2410c", fg: "#ffffff" },
+  social: { bg: "#0b7a6f", fg: "#ffffff" },
+  entrepreneurship: { bg: "#ffb020", fg: "#1c1326" },
+  other: { bg: "#4a4a57", fg: "#ffffff" },
+};
+
+export function categoryPosterColors(key: CategoryKey): { bg: string; fg: string } {
+  return POSTER_COLORS[key];
+}
