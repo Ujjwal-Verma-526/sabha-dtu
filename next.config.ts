@@ -8,7 +8,8 @@ import {
 // Security headers for every route. The policy is static (no per-request
 // nonce), so script-src has to allow 'unsafe-inline' for the inline scripts
 // Next.js emits; see "Accepted limitations" in CLAUDE.md. Everything else is
-// tight: our own origin plus our own Supabase project, nothing else.
+// tight: our own origin plus our own Supabase project, and Google Identity
+// Services for the sign-in button (src/lib/google-identity.ts).
 function supabaseOrigins(): { http: string[]; socket: string[] } {
   try {
     const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
@@ -22,6 +23,10 @@ function supabaseOrigins(): { http: string[]; socket: string[] } {
   }
 }
 
+// Google Identity Services, exactly as Google's CSP guide lists it: the
+// script, its stylesheet, and the button iframe and its requests under /gsi/.
+const GOOGLE_GSI = "https://accounts.google.com/gsi/";
+
 function contentSecurityPolicy(isDev: boolean): string {
   const supabase = supabaseOrigins();
   const directives: Record<string, string[]> = {
@@ -32,9 +37,10 @@ function contentSecurityPolicy(isDev: boolean): string {
       "'self'",
       "'unsafe-inline'",
       "'wasm-unsafe-eval'",
+      `${GOOGLE_GSI}client`,
       ...(isDev ? ["'unsafe-eval'"] : []),
     ],
-    "style-src": ["'self'", "'unsafe-inline'"],
+    "style-src": ["'self'", "'unsafe-inline'", `${GOOGLE_GSI}style`],
     // blob: and data: for the client-side image preview and canvas upload.
     "img-src": ["'self'", "data:", "blob:", ...supabase.http],
     "font-src": ["'self'"],
@@ -43,8 +49,10 @@ function contentSecurityPolicy(isDev: boolean): string {
       "'self'",
       ...supabase.http,
       ...supabase.socket,
+      GOOGLE_GSI,
       ...(isDev ? ["ws://localhost:*", "ws://127.0.0.1:*"] : []),
     ],
+    "frame-src": ["'self'", GOOGLE_GSI],
     "frame-ancestors": ["'none'"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
