@@ -36,9 +36,10 @@ src/
     layout/       Header, nav — structural chrome
     ui/           Reusable primitives (Button, Card, Badge, Spinner)
   lib/
-    supabase/     Browser, server, and middleware Supabase clients + DB types
+    supabase/     Browser, server, and proxy Supabase clients + DB types
     utils.ts      Small shared helpers
-middleware.ts     Refreshes the Supabase auth session on every request
+  proxy.ts        Refreshes the Supabase auth session on every request;
+                  sends signed-in visitors from / to /events
 supabase/
   migrations/     Numbered, reproducible SQL migrations (schema, auth sync,
                   helper functions/guard triggers, RLS policies)

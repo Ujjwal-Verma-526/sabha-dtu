@@ -24,7 +24,7 @@ export async function createClient() {
             );
           } catch {
             // Called from a Server Component — safe to ignore since
-            // middleware.ts already refreshes the session on each request.
+            // src/proxy.ts already refreshes the session on each request.
           }
         },
       },
