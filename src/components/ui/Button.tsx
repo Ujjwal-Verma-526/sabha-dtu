@@ -7,6 +7,8 @@ const variants = {
   ghost: "border border-control bg-surface text-ink hover:border-ink",
   soft: "bg-soft text-ink hover:bg-line",
   danger: "border border-danger-line bg-surface text-danger hover:bg-danger-soft",
+  /** The confirm step of a destructive action ("Yes, cancel it"). */
+  dangerSolid: "bg-danger text-on-danger hover:opacity-90",
 } as const;
 
 type Variant = keyof typeof variants;

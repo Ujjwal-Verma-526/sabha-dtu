@@ -82,14 +82,14 @@ export function LogoUpload({
         <ClubLogo
           name={clubName}
           logoUrl={logoUrl || null}
-          className={`h-16 w-16 shrink-0 text-lg ${
+          className={`h-16 w-16 shrink-0 rounded-2xl text-lg ${
             invalid ? "ring-2 ring-danger" : ""
           }`}
         />
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <label
             htmlFor={inputId}
-            className="cursor-pointer rounded-lg border border-dashed border-line px-3 py-2 text-sm text-ink-soft hover:border-primary hover:text-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary"
+            className="inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-dashed border-control px-4 text-[15px] font-semibold text-ink hover:border-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary"
           >
             {status === "uploading" ? (
               <span className="inline-flex items-center gap-2">
@@ -113,7 +113,7 @@ export function LogoUpload({
             <button
               type="button"
               onClick={() => setLogoUrl("")}
-              className="text-sm text-ink-soft underline hover:text-ink"
+              className="min-h-11 px-1 text-sm font-medium text-ink-soft underline hover:text-ink"
             >
               Remove logo
             </button>
@@ -121,12 +121,12 @@ export function LogoUpload({
         </div>
       </div>
 
-      <span className="text-xs text-ink-soft">
+      <span className="text-[13px] leading-snug text-ink-soft">
         JPEG, PNG or WebP, up to 5 MB. Shown small and square, so a simple
         image works best.
       </span>
       {error && (
-        <p role="alert" className="text-sm text-danger [overflow-wrap:anywhere]">
+        <p role="alert" className="text-[13px] font-medium text-danger [overflow-wrap:anywhere]">
           {error}
         </p>
       )}

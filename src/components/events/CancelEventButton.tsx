@@ -20,34 +20,20 @@ export function CancelEventButton({
 
   if (!confirming) {
     return (
-      <Button
-        type="button"
-        variant="ghost"
-        className="text-sm text-danger"
-        onClick={() => setConfirming(true)}
-      >
+      <Button type="button" variant="danger" onClick={() => setConfirming(true)}>
         Cancel event
       </Button>
     );
   }
 
   return (
-    <div className="flex items-start gap-2">
-      <span className="py-2 text-sm text-ink-soft">Cancel this event?</span>
-      <Button
-        type="button"
-        variant="ghost"
-        className="text-sm"
-        onClick={() => setConfirming(false)}
-      >
+    <div className="flex w-full flex-wrap items-center gap-2 rounded-xl bg-danger-soft px-3 py-2.5">
+      <span className="mr-auto text-sm font-semibold text-danger">Cancel this event?</span>
+      <Button type="button" variant="ghost" onClick={() => setConfirming(false)}>
         No
       </Button>
       <ActionForm action={cancelAction}>
-        <SubmitButton
-          variant="primary"
-          className="text-sm bg-red-600 hover:bg-red-700"
-          pendingLabel="Cancelling…"
-        >
+        <SubmitButton variant="dangerSolid" pendingLabel="Cancelling…">
           Yes, cancel it
         </SubmitButton>
       </ActionForm>

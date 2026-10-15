@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { NotSuperAdmin } from "@/components/layout/ManageNotice";
 import { NewClubForm } from "@/components/clubs/NewClubForm";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default async function NewClubPage() {
   const supabase = await createClient();
@@ -18,28 +20,22 @@ export default async function NewClubPage() {
     .maybeSingle();
 
   if (profile?.role !== "super_admin") {
-    return (
-      <main className="mx-auto max-w-lg flex-1 px-6 py-16 text-center">
-        <p className="text-ink-soft">
-          This area is for Sabha super admins only.
-        </p>
-      </main>
-    );
+    return <NotSuperAdmin />;
   }
 
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-6 py-12">
+    <main className="mx-auto w-full max-w-xl flex-1 px-4 pt-5 pb-16 md:pt-10">
       <Breadcrumbs
         items={[
-          { label: "Admin", href: "/admin/clubs" },
+          { label: "Manage", href: "/admin/clubs" },
           { label: "New club" },
         ]}
       />
-      <h1 className="font-display text-2xl font-bold text-ink">New club</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Only real, verified-by-you DTU societies belong here — students
-        can&apos;t create clubs themselves.
-      </p>
+      <PageHeader
+        size="md"
+        title="New club"
+        description="Only real, verified-by-you DTU societies belong here. Students can't create clubs themselves."
+      />
 
       <NewClubForm />
     </main>

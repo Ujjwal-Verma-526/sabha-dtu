@@ -1,8 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/Card";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { NotManager } from "@/components/layout/ManageNotice";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Icon } from "@/components/ui/Icon";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ButtonLink } from "@/components/ui/Button";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
 import { formatIstDateTime } from "@/lib/ist";
@@ -12,7 +15,7 @@ const SECTIONS: { status: EventStatus; label: string; hint: string }[] = [
   {
     status: "draft",
     label: "Drafts",
-    hint: "Not visible to students yet — finish and publish when ready.",
+    hint: "Not visible to students yet. Finish and publish when ready.",
   },
   {
     status: "published",
@@ -22,7 +25,7 @@ const SECTIONS: { status: EventStatus; label: string; hint: string }[] = [
   {
     status: "cancelled",
     label: "Cancelled",
-    hint: "Kept for the record — no longer shown publicly.",
+    hint: "Kept for the record, no longer shown publicly.",
   },
   {
     status: "completed",
@@ -64,11 +67,7 @@ export default async function ClubEventsPage({
     (membership.role === "admin" || membership.role === "coordinator");
 
   if (!isSuperAdmin && !isManager) {
-    return (
-      <main className="mx-auto max-w-lg flex-1 px-6 py-16 text-center">
-        <p className="text-ink-soft">You don&apos;t manage this club.</p>
-      </main>
-    );
+    return <NotManager />;
   }
 
   // Manager/super_admin: events_select_published_or_manager lets this
@@ -83,80 +82,74 @@ export default async function ClubEventsPage({
     (events ?? []).filter((e) => e.status === status);
 
   return (
-    <main className="mx-auto max-w-3xl flex-1 px-6 py-12">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <Breadcrumbs
-            items={[
-              ...(isSuperAdmin ? [{ label: "Admin", href: "/admin/clubs" }] : []),
-              { label: club.name, href: `/admin/clubs/${clubId}` },
-              { label: "Events" },
-            ]}
-          />
-          <h1 className="font-display text-2xl font-bold text-ink">
-            Events
-          </h1>
-        </div>
-        <ButtonLink
-          href={`/admin/clubs/${clubId}/events/new`}
-          variant="primary"
-          className="text-sm"
-        >
-          New event
-        </ButtonLink>
-      </div>
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-5 pb-16 md:px-8 md:pt-10">
+      <Breadcrumbs
+        items={[
+          ...(isSuperAdmin ? [{ label: "Manage", href: "/admin/clubs" }] : []),
+          { label: club.name, href: `/admin/clubs/${clubId}` },
+          { label: "Events" },
+        ]}
+      />
+      <PageHeader
+        size="md"
+        title="Events"
+        description={club.name}
+        actions={
+          <ButtonLink href={`/admin/clubs/${clubId}/events/new`}>
+            <Icon name="plus" strokeWidth={2.2} />
+            New event
+          </ButtonLink>
+        }
+      />
 
-      <div className="mt-8 flex flex-col gap-8">
+      <div className="mt-6 flex flex-col gap-9">
         {SECTIONS.map((section) => {
           const items = byStatus(section.status);
           if (items.length === 0) return null;
 
           return (
-            <section key={section.status}>
-              <div className="flex items-center gap-2">
-                <h2 className="font-display text-base font-semibold text-ink">
-                  {section.label}
-                </h2>
-                <span className="font-mono text-xs text-ink-soft">
-                  {items.length}
-                </span>
-              </div>
-              <p className="mt-0.5 text-xs text-ink-soft">{section.hint}</p>
+            <section key={section.status} aria-labelledby={`${section.status}-heading`}>
+              <h2 id={`${section.status}-heading`} className="font-semibold text-ink">
+                {section.label} <span className="font-medium text-ink-soft">· {items.length}</span>
+              </h2>
+              <p className="mt-0.5 text-[13px] text-ink-soft">{section.hint}</p>
 
-              <div className="mt-3 flex flex-col gap-3">
+              <ul className="mt-3 overflow-hidden rounded-2xl border border-line bg-surface">
                 {items.map((event) => (
-                  <Link
-                    key={event.id}
-                    href={`/admin/clubs/${clubId}/events/${event.id}`}
-                  >
-                    <Card className="flex items-center justify-between gap-3 transition-colors hover:border-primary">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-ink">
+                  <li key={event.id} className="border-b border-line last:border-b-0">
+                    <Link
+                      href={`/admin/clubs/${clubId}/events/${event.id}`}
+                      className="group flex items-center gap-3 px-4 py-3.5 hover:bg-soft"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold break-words text-ink group-hover:text-primary">
                           {event.title}
                         </p>
-                        <p className="font-mono text-xs text-ink-soft">
+                        <p className="text-[13px] text-ink-soft">
                           {formatIstDateTime(event.start_at)}
+                          {event.capacity != null && ` · ${event.capacity} seats`}
                         </p>
                       </div>
                       <EventStatusBadge status={event.status} />
-                    </Card>
-                  </Link>
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </section>
           );
         })}
 
         {(!events || events.length === 0) && (
-          <div className="mt-8 flex flex-col items-center gap-2 py-16 text-center">
-            <p className="font-display text-lg font-semibold text-ink">
-              No events yet.
-            </p>
-            <p className="max-w-sm text-sm text-ink-soft">
-              Create your first event — it starts as a draft, so nothing
-              goes live until you publish it.
-            </p>
-          </div>
+          <EmptyState
+            icon="calendar"
+            title="No events yet"
+            action={
+              <ButtonLink href={`/admin/clubs/${clubId}/events/new`}>New event</ButtonLink>
+            }
+          >
+            Create your first event. It starts as a draft, so nothing goes live until you publish
+            it.
+          </EmptyState>
         )}
       </div>
     </main>

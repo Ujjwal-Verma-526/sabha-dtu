@@ -148,10 +148,12 @@ export function CheckInConsole({
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="font-display text-ink">
-        <span className="text-4xl font-bold tabular-nums">{counts.checkedIn}</span>
-        <span className="text-2xl text-ink-soft tabular-nums"> / {counts.registered}</span>
-        <span className="ml-2 font-sans text-sm text-ink-soft">checked in</span>
+      <p className="flex flex-wrap items-baseline gap-x-2 rounded-2xl border border-line bg-surface px-5 py-4 text-ink">
+        <span className="text-[44px] leading-none font-bold tracking-[-0.03em] tabular-nums">
+          {counts.checkedIn}
+        </span>
+        <span className="text-2xl font-semibold text-ink-soft tabular-nums">/ {counts.registered}</span>
+        <span className="text-base font-medium text-ink-soft">checked in</span>
       </p>
 
       {/* Grouped so the (usually empty) live region adds no gap. */}

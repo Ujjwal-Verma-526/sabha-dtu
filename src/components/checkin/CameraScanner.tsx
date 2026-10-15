@@ -207,6 +207,7 @@ export function CameraScanner({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* The viewfinder is black in both themes, like the camera feed itself. */}
       <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-black">
         <video
           ref={videoRef}
@@ -225,7 +226,7 @@ export function CameraScanner({
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
-            <p className="text-sm text-white/80">
+            <p className="text-base font-medium text-white">
               {status === "starting" ? "Starting the camera…" : "Point the camera at a ticket's QR code."}
             </p>
             <Button type="button" variant="primary" onClick={start} disabled={status === "starting"}>
@@ -236,13 +237,16 @@ export function CameraScanner({
       </div>
 
       {status === "scanning" && (
-        <Button type="button" variant="ghost" className="self-start text-sm" onClick={stop}>
+        <Button type="button" variant="ghost" className="self-start" onClick={stop}>
           Stop camera
         </Button>
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-xl border border-danger-line bg-danger-soft px-3.5 py-2.5 text-sm font-medium text-danger"
+        >
           {ERROR_MESSAGE[error]}
         </p>
       )}

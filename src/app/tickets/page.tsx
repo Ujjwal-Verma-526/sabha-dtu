@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
-import { TicketStub } from "@/components/tickets/TicketStub";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader, sectionHeadingClass } from "@/components/ui/PageHeader";
+import { PastTicketRow, TicketStub } from "@/components/tickets/TicketStub";
 import { loginPathFor } from "@/lib/auth-redirect";
 import { renderTicketQrSvg } from "@/lib/qr";
 import { getTicketState, type TicketState } from "@/lib/tickets";
@@ -27,13 +27,22 @@ export default async function TicketsPage() {
 
   // Event details come from get_my_registrations() (security definer,
   // scoped to auth.uid()) because events RLS hides cancelled/completed
-  // events from students. It never returns tokens.
-  const { data: registrations, error: registrationsError } =
-    await supabase.rpc("get_my_registrations");
+  // events from students. It never returns tokens. The name printed on the
+  // tickets is the viewer's own users row, under its own-row RLS.
+  const [registrationsResult, profileResult] = await Promise.all([
+    supabase.rpc("get_my_registrations"),
+    supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
+  ]);
+  const { data: registrations, error: registrationsError } = registrationsResult;
 
   if (registrationsError) {
     throw new Error(`Could not load your tickets: ${registrationsError.message}`);
   }
+  if (profileResult.error) {
+    // The name is a courtesy for the door team; the QR works without it.
+    console.error("Could not load the ticket holder's name", profileResult.error.message);
+  }
+  const attendeeName = profileResult.data?.name ?? null;
 
   const now = new Date();
   const tickets = registrations.map((registration) => ({
@@ -81,74 +90,72 @@ export default async function TicketsPage() {
   const past = tickets.filter((ticket) => !isCurrent(ticket.state)).reverse();
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-      <h1 className="font-display text-3xl font-bold text-ink">My tickets</h1>
-      <p className="mt-2 text-ink-soft">
-        One QR per event. Open this page at the entrance and show the code.
-      </p>
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-16 md:px-8 md:pt-11">
+      <PageHeader title="My tickets" description="One QR per event. Open it at the door." />
 
       {tickets.length === 0 ? (
-        <Card className="mt-8 text-center">
-          <p className="font-display text-lg font-semibold text-ink">No tickets yet</p>
-          <p className="mt-1 text-sm text-ink-soft">
-            Register for an event and its ticket will appear here.
-          </p>
-          <ButtonLink href="/events" variant="primary" className="mt-5">
-            Browse events
-          </ButtonLink>
-        </Card>
+        <EmptyState
+          icon="ticket"
+          title="No tickets yet"
+          className="mt-8"
+          action={<ButtonLink href="/events">Browse events</ButtonLink>}
+        >
+          Register for an event and its ticket shows up here.
+        </EmptyState>
       ) : (
-        <>
-          <section className="mt-10" aria-labelledby="upcoming-heading">
-            <h2
-              id="upcoming-heading"
-              className="font-mono text-xs uppercase tracking-widest text-ink-soft"
-            >
+        <div className="mt-6 md:mt-8 md:grid md:grid-cols-[420px_minmax(0,1fr)] md:items-start md:gap-14">
+          <section aria-labelledby="upcoming-heading">
+            <h2 id="upcoming-heading" className={sectionHeadingClass}>
               Upcoming · {current.length}
             </h2>
             {current.length === 0 ? (
-              <p className="mt-4 text-sm text-ink-soft">
-                Nothing coming up.{" "}
-                <Link href="/events" className="font-medium text-primary hover:underline">
-                  Find an event
-                </Link>
-                .
-              </p>
+              <EmptyState
+                title="Nothing coming up"
+                className="mt-3"
+                action={
+                  <ButtonLink href="/events" variant="soft">
+                    Find an event
+                  </ButtonLink>
+                }
+              >
+                Register for an event and its QR shows up here.
+              </EmptyState>
             ) : (
-              <div className="mt-4 grid gap-6 sm:grid-cols-2">
+              <div className="mt-3 flex flex-col gap-6">
                 {current.map(({ registration, state }) => (
                   <TicketStub
                     key={registration.registration_id}
-                    state={state}
+                    state={state === "on_hold" ? "on_hold" : "active"}
                     qrSvg={qrByRegistration.get(registration.registration_id) ?? null}
                     ticket={toStubData(registration)}
+                    attendeeName={attendeeName}
                   />
                 ))}
               </div>
             )}
           </section>
 
-          {past.length > 0 && (
-            <section className="mt-14" aria-labelledby="past-heading">
-              <h2
-                id="past-heading"
-                className="font-mono text-xs uppercase tracking-widest text-ink-soft"
-              >
-                Past &amp; cancelled · {past.length}
-              </h2>
-              <div className="mt-4 grid gap-6 sm:grid-cols-2">
+          <section aria-labelledby="past-heading" className="mt-10 md:mt-0">
+            <h2 id="past-heading" className={sectionHeadingClass}>
+              Past &amp; cancelled · {past.length}
+            </h2>
+            {past.length === 0 ? (
+              <p className="mt-3 text-sm text-ink-soft">
+                Events you&apos;ve been to, and any that were cancelled, are listed here.
+              </p>
+            ) : (
+              <ul className="mt-1">
                 {past.map(({ registration, state }) => (
-                  <TicketStub
+                  <PastTicketRow
                     key={registration.registration_id}
-                    state={state}
-                    qrSvg={null}
+                    state={state === "cancelled" ? "cancelled" : "ended"}
                     ticket={toStubData(registration)}
                   />
                 ))}
-              </div>
-            </section>
-          )}
-        </>
+              </ul>
+            )}
+          </section>
+        </div>
       )}
     </main>
   );
@@ -162,6 +169,7 @@ function toStubData(registration: {
   event_slug: string;
   event_venue: string | null;
   event_start_at: string;
+  event_end_at: string;
   club_name: string;
 }) {
   return {
@@ -172,6 +180,7 @@ function toStubData(registration: {
     eventSlug: registration.event_slug,
     eventVenue: registration.event_venue,
     eventStartAt: registration.event_start_at,
+    eventEndAt: registration.event_end_at,
     clubName: registration.club_name,
   };
 }

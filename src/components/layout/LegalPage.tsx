@@ -23,14 +23,12 @@ export function LegalPage({
   children: ReactNode;
 }) {
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-12">
-      <h1 className="font-display text-4xl font-bold tracking-tight text-ink">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-6 pb-16 md:px-8 md:pt-11">
+      <h1 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-ink md:text-[40px]">
         {title}
       </h1>
-      <p className="mt-2 font-mono text-xs uppercase tracking-widest text-ink-soft">
-        Last updated {updated}
-      </p>
-      <div className="mt-8 space-y-4 text-ink-soft [&_h2]:mt-10 [&_h2]:font-display [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-ink [&_li]:ml-5 [&_li]:list-disc [&_strong]:text-ink">
+      <p className="mt-2 text-[13px] font-medium text-ink-soft">Last updated {updated}</p>
+      <div className="mt-8 space-y-4 text-base leading-relaxed text-ink [&_h2]:pt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-[-0.02em] [&_h2]:text-ink [&_li]:ml-5 [&_li]:list-disc [&_li]:pl-1 [&_li+li]:mt-2 [&_strong]:font-semibold">
         {children}
       </div>
     </main>

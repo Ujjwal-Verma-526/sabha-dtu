@@ -15,8 +15,8 @@ export async function renderTicketQrSvg(token: string): Promise<string> {
     type: "svg",
     errorCorrectionLevel: "M",
     margin: 2,
-    // Dark-on-light is what door scanners expect; these are --ink and
-    // --surface from globals.css (the library needs literal hex values).
-    color: { dark: "#15161a", light: "#ffffff" },
+    // Pure black on white, the most contrast a door camera can get. The
+    // ticket card is white in both themes (.theme-light in globals.css).
+    color: { dark: "#000000", light: "#ffffff" },
   });
 }

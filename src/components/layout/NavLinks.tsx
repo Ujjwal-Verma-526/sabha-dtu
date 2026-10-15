@@ -62,13 +62,24 @@ export function ProfileLink() {
   );
 }
 
-// Pages without the phone tab bar. The event page has its own sticky
-// Register bar in the same spot. Every page listed here gets BackLink in
-// the header instead, so a phone always has a way back.
-const HIDDEN_ON = [/^\/events\/[^/]+$/];
+// Pages without the phone tab bar, each with where BackLink goes when there
+// is no in-app history. The event page has its own sticky Register bar in
+// the same spot; the door scanner needs the whole screen. Every page listed
+// here gets BackLink in the header instead, so a phone always has a way back.
+const HIDDEN_ON: { pattern: RegExp; fallback: (pathname: string) => string }[] = [
+  { pattern: /^\/events\/[^/]+$/, fallback: () => "/events" },
+  {
+    pattern: /^\/admin\/clubs\/[^/]+\/events\/[^/]+\/scan$/,
+    fallback: (pathname) => pathname.replace(/\/scan$/, ""),
+  },
+];
 
 function hidesTabBar(pathname: string) {
-  return HIDDEN_ON.some((pattern) => pattern.test(pathname));
+  return HIDDEN_ON.some(({ pattern }) => pattern.test(pathname));
+}
+
+function backFallback(pathname: string) {
+  return HIDDEN_ON.find(({ pattern }) => pattern.test(pathname))?.fallback(pathname) ?? "/events";
 }
 
 // Whether this tab has moved between Sabha pages since the app loaded.
@@ -89,7 +100,8 @@ export function NavigationTracker() {
 /**
  * Back arrow at the left of the phone header, on pages without the tab bar.
  * Goes back if the visitor came from another Sabha page; otherwise (a
- * shared link, a reload) it's a plain link to /events.
+ * shared link, a reload) it's a plain link to the page's fallback (/events
+ * for an event, the event's manage page for the scanner).
  */
 export function BackLink() {
   const pathname = usePathname();
@@ -97,7 +109,7 @@ export function BackLink() {
   if (!hidesTabBar(pathname)) return null;
   return (
     <Link
-      href="/events"
+      href={backFallback(pathname)}
       aria-label="Back"
       title="Back"
       onClick={(event) => {
