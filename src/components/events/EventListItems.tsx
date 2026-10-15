@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CategoryDot, EventPoster } from "@/components/events/EventPoster";
+import { Icon } from "@/components/ui/Icon";
 import { categoryKey, categoryLabel } from "@/lib/categories";
 import { formatIstDateTime, formatIstTime, isSameIstDay } from "@/lib/ist";
 
@@ -15,8 +16,18 @@ export type EventListData = {
   club: { name: string; slug: string; verified: boolean };
 };
 
+/** The signed-in viewer is registered for this event. Text plus a tick, never colour alone. */
+function GoingMark({ className }: { className: string }) {
+  return (
+    <p className={`flex items-center gap-1 text-[13px] font-semibold ${className}`}>
+      <Icon name="check" strokeWidth={2.4} />
+      You&apos;re going
+    </p>
+  );
+}
+
 /** One event in the day-grouped /events list: text on the left, poster on the right. */
-export function EventRow({ event }: { event: EventListData }) {
+export function EventRow({ event, going = false }: { event: EventListData; going?: boolean }) {
   const category = categoryKey(event.category);
   return (
     <Link
@@ -36,6 +47,7 @@ export function EventRow({ event }: { event: EventListData }) {
           {event.club.name}
           {event.venue && ` · ${event.venue}`}
         </p>
+        {going && <GoingMark className="mt-1.5 text-success" />}
       </div>
       <EventPoster
         title={event.title}
@@ -50,7 +62,7 @@ export function EventRow({ event }: { event: EventListData }) {
 }
 
 /** Rani-pink band for an event that's running right now. */
-export function LiveBanner({ event }: { event: EventListData }) {
+export function LiveBanner({ event, going = false }: { event: EventListData; going?: boolean }) {
   const category = categoryKey(event.category);
   const showsEnd = event.end_at !== event.start_at;
   return (
@@ -84,6 +96,7 @@ export function LiveBanner({ event }: { event: EventListData }) {
                 : formatIstDateTime(event.end_at)
             }`}
         </p>
+        {going && <GoingMark className="mt-1.5" />}
       </div>
     </Link>
   );

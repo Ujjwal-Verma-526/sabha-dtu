@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -7,6 +8,7 @@ import { clubMonogram } from "@/components/clubs/ClubLogo";
 import { DateNumeral } from "@/components/events/DateNumeral";
 import { CategoryDot, EventPoster } from "@/components/events/EventPoster";
 import { RegisterCTA, type RegisterCTAState } from "@/components/events/RegisterCTA";
+import { ShareActions } from "@/components/events/ShareActions";
 import { ButtonLink } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import {
@@ -28,7 +30,16 @@ import {
   isSameIstDay,
   istRelativeDay,
 } from "@/lib/ist";
+import {
+  eventPath,
+  eventWhenWhere,
+  googleCalendarUrl,
+  truncateText,
+  whatsappMessage,
+  whatsappUrl,
+} from "@/lib/event-share";
 import { canManageClub, getViewerRoles } from "@/lib/roles";
+import { siteOrigin } from "@/lib/site-url";
 import { effectiveEventEnd } from "@/lib/tickets";
 import { registerForEvent } from "./actions";
 
@@ -146,24 +157,52 @@ export async function generateMetadata({
   }
 
   const title = `${event.title} — Sabha`;
-  const description =
-    event.description?.slice(0, 200) ??
-    `${event.club?.name ?? "A DTU society"} event on Sabha.`;
+  const shareable = {
+    start_at: event.start_at,
+    end_at: event.end_at,
+    venue: event.venue,
+  };
+  // What a pasted link shows under the title: when and where first, then the
+  // society and the start of the description.
+  const description = truncateText(
+    [
+      `${eventWhenWhere(shareable)}.`,
+      ...(event.club ? [`Hosted by ${event.club.name}.`] : []),
+      ...(event.description ? [event.description.replace(/\s+/g, " ")] : []),
+    ].join(" "),
+    200,
+  );
+
+  const origin = siteOrigin(await headers());
+  const path = eventPath(event.slug);
+  const imageAlt = `${event.title}, ${eventWhenWhere(shareable)}`;
+  // The banner if the society uploaded one; otherwise a generated poster, so
+  // every event's link has a picture.
+  const image = event.banner_url
+    ? { url: event.banner_url, alt: imageAlt }
+    : { url: `${path}/poster.png`, width: 1200, height: 630, alt: imageAlt };
 
   return {
+    // Relative image/canonical URLs below resolve against the request's own
+    // origin; WhatsApp and friends need absolute ones.
+    metadataBase: new URL(origin),
     title,
     description,
+    alternates: { canonical: path },
     openGraph: {
       title,
       description,
+      url: path,
+      siteName: "Sabha",
+      locale: "en_IN",
       type: "website",
-      images: event.banner_url ? [{ url: event.banner_url }] : undefined,
+      images: [image],
     },
     twitter: {
-      card: event.banner_url ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title,
       description,
-      images: event.banner_url ? [event.banner_url] : undefined,
+      images: [{ url: image.url, alt: imageAlt }],
     },
   };
 }
@@ -268,6 +307,7 @@ export default async function EventPage({
   }
 
   const now = new Date();
+  const origin = siteOrigin(await headers());
   const registrationClosed = isRegistrationClosed(event, now);
   const category = categoryKey(event.category);
   const clubName = event.club?.name ?? "A DTU society";
@@ -304,6 +344,17 @@ export default async function EventPage({
     spotsLeft != null && spotsLeft > 0
       ? `Free · ${spotsLeft} ${spotsLeft === 1 ? "spot" : "spots"} left`
       : "Free entry";
+  const eventUrl = `${origin}${eventPath(event.slug)}`;
+  const shareable = {
+    id: event.id,
+    title: event.title,
+    slug: event.slug,
+    description: event.description,
+    venue: event.venue,
+    start_at: event.start_at,
+    end_at: event.end_at,
+    clubName: event.club?.name ?? null,
+  };
   const closesLine = `${registrationClosed ? "Registration closed" : "Registration closes"} ${formatIstShortDate(registrationClosesAt(event))}, ${formatIstTime(registrationClosesAt(event))}`;
 
   return (
@@ -447,6 +498,15 @@ export default async function EventPage({
               registerAction={registerForEvent.bind(null, event.id, event.slug)}
             />
           </div>
+
+          <ShareActions
+            title={event.title}
+            summary={eventWhenWhere(shareable)}
+            eventUrl={eventUrl}
+            whatsappHref={whatsappUrl(whatsappMessage(shareable, eventUrl))}
+            googleCalendarHref={ended ? null : googleCalendarUrl(shareable, eventUrl)}
+            icsHref={ended ? null : `${eventPath(event.slug)}/calendar.ics`}
+          />
 
           {event.description && (
             <section aria-labelledby="about" className="mt-7 border-t border-line pt-5">

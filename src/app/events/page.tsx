@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DateNumeral } from "@/components/events/DateNumeral";
 import { CategoryDot } from "@/components/events/EventPoster";
 import { EventRow, LiveBanner, type EventListData } from "@/components/events/EventListItems";
+import { NextTicketCard } from "@/components/events/NextTicketCard";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { fieldClass } from "@/components/ui/Input";
@@ -18,6 +19,7 @@ import {
   istWeekday,
 } from "@/lib/ist";
 import { cn } from "@/lib/utils";
+import { getViewerRegistrations } from "@/lib/viewer-registrations";
 
 export const metadata = {
   title: "Events — Sabha",
@@ -80,7 +82,9 @@ export default async function EventsPage({
     .lte("start_at", now.toISOString())
     .gte("end_at", happeningNowEndFloor(now));
 
-  const [{ data: events }, { data: liveEvents }, { data: clubOptions }] =
+  // The viewer's own registrations ("You're going", "Your next ticket"):
+  // null, and no query, when nobody is signed in.
+  const [{ data: events }, { data: liveEvents }, { data: clubOptions }, viewer] =
     await Promise.all([
       upcomingQuery,
       happeningNowQuery,
@@ -89,7 +93,9 @@ export default async function EventsPage({
         .select("slug, name")
         .eq("verified", true)
         .order("name"),
+      getViewerRegistrations(supabase, now),
     ]);
+  const isGoing = (slug: string) => viewer?.goingSlugs.has(slug) ?? false;
 
   const items = (events ?? []) as unknown as EventListData[];
   const happeningNow = (
@@ -236,7 +242,7 @@ export default async function EventsPage({
               </h2>
               <div className="flex flex-col gap-3">
                 {happeningNow.map((event) => (
-                  <LiveBanner key={event.slug} event={event} />
+                  <LiveBanner key={event.slug} event={event} going={isGoing(event.slug)} />
                 ))}
               </div>
             </section>
@@ -264,7 +270,7 @@ export default async function EventsPage({
                     </div>
                     <div>
                       {day.events.map((event) => (
-                        <EventRow key={event.slug} event={event} />
+                        <EventRow key={event.slug} event={event} going={isGoing(event.slug)} />
                       ))}
                     </div>
                   </div>
@@ -303,6 +309,11 @@ export default async function EventsPage({
         </div>
 
         <aside className="hidden md:sticky md:top-24 md:mt-11 md:block md:self-start">
+          {viewer?.nextTicket && (
+            <div className="mb-4">
+              <NextTicketCard ticket={viewer.nextTicket} now={now} />
+            </div>
+          )}
           <div className="rounded-2xl border border-line bg-surface p-5 shadow-card">
             <p className="font-semibold tracking-[-0.015em] text-ink">Running a society event?</p>
             <p className="mt-1.5 text-[13.5px] text-ink-soft">

@@ -16,6 +16,11 @@ type Variant = keyof typeof variants;
 const base =
   "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60";
 
+/** The button look for something that isn't a <button> or a next/link (an external or download <a>). */
+export function buttonClass(variant: Variant = "primary", className?: string) {
+  return cn(base, variants[variant], className);
+}
+
 type ButtonProps = ComponentPropsWithoutRef<"button"> & { variant?: Variant };
 
 export function Button({ variant = "primary", className, ...props }: ButtonProps) {
