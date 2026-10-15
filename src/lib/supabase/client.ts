@@ -4,7 +4,7 @@ import type { Database } from "./types";
 /**
  * Supabase client for use in Client Components. Reads and writes the
  * auth session via browser cookies, kept in sync with the server by
- * middleware.ts.
+ * src/proxy.ts.
  */
 export function createClient() {
   return createBrowserClient<Database>(

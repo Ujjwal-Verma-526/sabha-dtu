@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { DateNumeral } from "@/components/events/DateNumeral";
 import { EventPoster } from "@/components/events/EventPoster";
 import type { EventListData } from "@/components/events/EventListItems";
@@ -44,17 +43,8 @@ const softButtonClass =
   "mt-4 inline-flex min-h-11 items-center rounded-xl bg-soft px-4 text-[15px] font-semibold text-ink hover:bg-line";
 
 export default async function Home() {
+  // Signed-in visitors never get here: src/proxy.ts sends them to /events.
   const supabase = await createClient();
-
-  // Signed-in visitors already know what Sabha is; send them to the feed.
-  // getClaims() verifies the JWT locally, like the header does. The root
-  // loading.tsx has already streamed by now, so this arrives as a
-  // client-side redirect (with a meta refresh for no-JS), not a 307.
-  const { data: claimsData } = await supabase.auth.getClaims();
-  if (claimsData?.claims?.sub) {
-    redirect("/events");
-  }
-
   const now = new Date();
 
   // The same public feed /events reads (published, verified clubs), cut
