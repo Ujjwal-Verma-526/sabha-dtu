@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { FormNotice, fieldStackClass, labelClass } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
+import { GoogleSignIn } from "./GoogleSignIn";
 
 type LoginFormProps = {
   /** Already-validated same-site path to return to after sign-in, or null. */
@@ -60,7 +61,9 @@ export function LoginForm({ next, initialError }: LoginFormProps) {
     setStatus("sent");
   }
 
-  async function signInWithGoogle() {
+  // The fallback when Google's own button can't be used: Supabase's redirect
+  // flow, back through /auth/callback (which reads the destination cookie).
+  async function signInWithGoogleRedirect() {
     setError(null);
     rememberDestination(next);
 
@@ -122,9 +125,7 @@ export function LoginForm({ next, initialError }: LoginFormProps) {
           <span className="h-px flex-1 bg-line" />
         </div>
 
-        <Button type="button" variant="ghost" className="w-full" onClick={signInWithGoogle}>
-          Continue with Google
-        </Button>
+        <GoogleSignIn next={next} onRedirectSignIn={signInWithGoogleRedirect} />
         {status === "sent" && error && (
           <FormNotice tone="error" className="mt-3">
             {error}
