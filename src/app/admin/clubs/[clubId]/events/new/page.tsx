@@ -4,7 +4,7 @@ import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { NotManager } from "@/components/layout/ManageNotice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EventForm } from "@/components/events/EventForm";
-import { emptyEventValues } from "@/lib/event-form";
+import { emptyEventValues, recentVenues } from "@/lib/event-form";
 import { createEvent } from "../actions";
 
 export default async function NewEventPage({
@@ -43,6 +43,15 @@ export default async function NewEventPage({
     return <NotManager />;
   }
 
+  // Venue shortcuts from the club's own events, under the existing events
+  // SELECT policy (managers see their club's drafts and cancelled events too).
+  const { data: venueRows } = await supabase
+    .from("events")
+    .select("venue")
+    .eq("club_id", clubId)
+    .order("start_at", { ascending: false })
+    .limit(30);
+
   const createWithClub = createEvent.bind(null, clubId);
 
   return (
@@ -58,15 +67,15 @@ export default async function NewEventPage({
       <PageHeader
         size="md"
         title="New event"
-        description={`For ${club.name}. It saves as a draft first, so nothing is public until you publish it.`}
+        description={`For ${club.name}. Publish to put it on Sabha now, or save a draft to finish later.`}
       />
 
       <EventForm
         clubId={clubId}
         action={createWithClub}
         initialValues={emptyEventValues}
-        submitLabel="Save draft"
-        pendingLabel="Saving…"
+        status={null}
+        recentVenues={recentVenues(venueRows ?? [])}
       />
     </main>
   );

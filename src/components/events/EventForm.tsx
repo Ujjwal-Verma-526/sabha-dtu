@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { BannerUpload } from "@/components/events/BannerUpload";
 import {
   FieldError,
@@ -10,12 +10,13 @@ import {
   labelClass,
   labelHintClass,
 } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Textarea } from "@/components/ui/Textarea";
 import { CATEGORY_KEYS, categoryLabel } from "@/lib/categories";
-import { EVENT_END_FALLBACK_HOURS } from "@/lib/tickets";
+import type { EventStatus } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import type {
   EventFieldName,
@@ -31,24 +32,47 @@ type EventFormProps = {
     formData: FormData,
   ) => Promise<EventFormState>;
   initialValues: EventFormValues;
-  submitLabel: string;
-  pendingLabel: string;
+  /** The event's current status, or null for a new event. Picks the buttons. */
+  status: EventStatus | null;
+  /** The club's recent distinct venues, newest first (recentVenues). */
+  recentVenues: string[];
 };
+
+// Plain chips, not category colours: forms stay plain. Each wraps a real,
+// visually hidden radio (peer), so it works without JS.
+const chipClass = cn(
+  "inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium text-ink transition-colors select-none",
+  "hover:border-ink peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper",
+  "peer-focus-visible:ring-3 peer-focus-visible:ring-primary/40",
+  "[&>svg]:hidden peer-checked:[&>svg]:block",
+);
+
+/** "YYYY-MM-DD" plus one calendar day, or "" if the value isn't a date. */
+function nextDay(date: string): string {
+  const day = new Date(`${date}T00:00:00Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(day.getTime())) return "";
+  day.setUTCDate(day.getUTCDate() + 1);
+  return day.toISOString().slice(0, 10);
+}
 
 export function EventForm({
   clubId,
   action,
   initialValues,
-  submitLabel,
-  pendingLabel,
+  status,
+  recentVenues,
 }: EventFormProps) {
   const [state, formAction] = useActionState<EventFormState, FormData>(action, {
     error: null,
     fieldErrors: {},
     values: initialValues,
-    saved: false,
+    savedMessage: null,
   });
   const { values, fieldErrors } = state;
+  const [confirmingDraft, setConfirmingDraft] = useState(false);
+  const dateRef = useRef<HTMLInputElement>(null);
+  const endDateRef = useRef<HTMLInputElement>(null);
+  const venueRef = useRef<HTMLInputElement>(null);
 
   // Props that tie an input to its error message. Input and Textarea turn
   // their own border red when aria-invalid is set.
@@ -60,7 +84,7 @@ export function EventForm({
   return (
     <form action={formAction} className="mt-6 flex flex-col gap-6">
       {state.error && <FormNotice tone="error">{state.error}</FormNotice>}
-      {state.saved && <FormNotice tone="success">Changes saved.</FormNotice>}
+      {state.savedMessage && <FormNotice tone="success">{state.savedMessage}</FormNotice>}
 
       <label className={fieldStackClass}>
         <span className={labelClass}>Title</span>
@@ -74,38 +98,96 @@ export function EventForm({
         <FieldError id="title-error" message={fieldErrors.title} />
       </label>
 
-      <div className="grid gap-6 sm:grid-cols-2 sm:gap-4">
-        <label className={fieldStackClass}>
-          <span className={labelClass}>
-            Starts<span className={labelHintClass}> · IST</span>
-          </span>
-          <Input
-            name="start_at"
-            type="datetime-local"
-            required
-            defaultValue={values.start_at}
-            {...invalid("start_at")}
-          />
-          <FieldError id="start_at-error" message={fieldErrors.start_at} />
-        </label>
-        <label className={fieldStackClass}>
-          <span className={labelClass}>
-            Ends<span className={labelHintClass}> · IST</span>
-          </span>
-          <Input
-            name="end_at"
-            type="datetime-local"
-            required
-            defaultValue={values.end_at}
-            {...invalid("end_at")}
-          />
-          <FieldError id="end_at-error" message={fieldErrors.end_at} />
-        </label>
-      </div>
+      {/* One date and two times. The end date only shows (pure CSS, so it
+          works without JS) when "Ends on a different day" is ticked; the
+          server ignores it otherwise. */}
+      <fieldset className="group/day flex min-w-0 flex-col gap-3">
+        <legend className={cn(labelClass, "mb-1.5")}>
+          When<span className={labelHintClass}> · IST</span>
+        </legend>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-[1.4fr_1fr_1fr]">
+          <label className={cn(fieldStackClass, "col-span-2 sm:col-span-1")}>
+            <span className={cn(labelClass, "font-medium")}>Date</span>
+            <Input
+              ref={dateRef}
+              name="date"
+              type="date"
+              required
+              className="w-full min-w-0"
+              defaultValue={values.date}
+              {...invalid("date")}
+            />
+            <FieldError id="date-error" message={fieldErrors.date} />
+          </label>
+          <label className={fieldStackClass}>
+            <span className={cn(labelClass, "font-medium")}>Starts</span>
+            <Input
+              name="start_time"
+              type="time"
+              required
+              className="w-full min-w-0"
+              defaultValue={values.start_time}
+              {...invalid("start_time")}
+            />
+            <FieldError id="start_time-error" message={fieldErrors.start_time} />
+          </label>
+          <label className={fieldStackClass}>
+            <span className={cn(labelClass, "font-medium")}>Ends</span>
+            <Input
+              name="end_time"
+              type="time"
+              required
+              className="w-full min-w-0"
+              defaultValue={values.end_time}
+              {...invalid("end_time")}
+            />
+            <FieldError id="end_time-error" message={fieldErrors.end_time} />
+          </label>
+        </div>
 
-      <label className={fieldStackClass}>
-        <span className={labelClass}>Venue</span>
+        <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start text-sm font-medium text-ink">
+          <input
+            type="checkbox"
+            name="ends_different_day"
+            defaultChecked={values.ends_different_day === "on"}
+            className="size-5 shrink-0 accent-primary"
+            onChange={(event) => {
+              // Suggest the next day for an overnight event (hack nights).
+              const endDate = endDateRef.current;
+              if (event.currentTarget.checked && endDate && !endDate.value) {
+                endDate.value = nextDay(dateRef.current?.value ?? "");
+              }
+            }}
+          />
+          Ends on a different day
+        </label>
+
+        <label
+          className={cn(
+            fieldStackClass,
+            "hidden sm:max-w-[calc((100%-1.5rem)*1.4/3.4)] group-has-checked/day:flex",
+          )}
+        >
+          <span className={cn(labelClass, "font-medium")}>End date</span>
+          <Input
+            ref={endDateRef}
+            name="end_date"
+            type="date"
+            className="w-full min-w-0"
+            defaultValue={values.end_date}
+            {...invalid("end_date")}
+          />
+          <FieldError id="end_date-error" message={fieldErrors.end_date} />
+        </label>
+      </fieldset>
+
+      <div className={fieldStackClass}>
+        <label htmlFor="venue" className={labelClass}>
+          Venue
+        </label>
         <Input
+          ref={venueRef}
+          id="venue"
           name="venue"
           required
           placeholder="Main Auditorium"
@@ -113,10 +195,30 @@ export function EventForm({
           {...invalid("venue")}
         />
         <FieldError id="venue-error" message={fieldErrors.venue} />
-      </label>
+        {recentVenues.length > 0 && (
+          <div role="group" aria-label="Recent venues" className="mt-1 flex flex-wrap items-center gap-2">
+            <span className={helpClass}>Recent:</span>
+            {recentVenues.map((venue) => (
+              <button
+                key={venue}
+                type="button"
+                onClick={() => {
+                  const input = venueRef.current;
+                  if (!input) return;
+                  input.value = venue;
+                  input.focus();
+                }}
+                className="inline-flex h-9 max-w-full items-center rounded-full border border-control bg-surface px-3 text-sm font-medium text-ink transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <span className="truncate">{venue}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Plain chips, not category colours: forms stay plain. Real radios,
-          so it works without JS and the browser enforces the choice. */}
+      {/* Real radios, so it works without JS and the browser enforces the
+          choice. */}
       <fieldset
         role="radiogroup"
         aria-labelledby="category-label"
@@ -141,10 +243,7 @@ export function EventForm({
               />
               <span
                 className={cn(
-                  "inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium text-ink transition-colors select-none",
-                  "hover:border-ink peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper",
-                  "peer-focus-visible:ring-3 peer-focus-visible:ring-primary/40",
-                  "[&>svg]:hidden peer-checked:[&>svg]:block",
+                  chipClass,
                   fieldErrors.category ? "border-danger" : "border-control",
                 )}
               >
@@ -186,8 +285,8 @@ export function EventForm({
           Free, one tap for students. Change these only if you need to.
         </p>
 
-        <div className="mt-5 grid gap-6 sm:grid-cols-2 sm:gap-4">
-          <label className={fieldStackClass}>
+        <div className="mt-5 flex flex-col gap-6">
+          <label className={cn(fieldStackClass, "sm:max-w-xs")}>
             <span className={labelClass}>
               Capacity<span className={labelHintClass}> · optional</span>
             </span>
@@ -203,36 +302,125 @@ export function EventForm({
             <span className={helpClass}>Leave blank for no limit.</span>
           </label>
 
-          <label className={fieldStackClass}>
-            <span className={labelClass}>
-              Registration deadline<span className={labelHintClass}> · IST, optional</span>
+          {/* The custom time shows (pure CSS) only while "At a custom time"
+              is picked; the server ignores it otherwise. */}
+          <fieldset className="group/deadline flex min-w-0 flex-col gap-1.5">
+            <legend className={cn(labelClass, "mb-1.5")}>Registration closes</legend>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["start", "When the event starts"],
+                  ["custom", "At a custom time"],
+                ] as const
+              ).map(([mode, label]) => (
+                <label key={mode} className="relative">
+                  <input
+                    type="radio"
+                    id={`deadline-${mode}`}
+                    name="deadline_mode"
+                    value={mode}
+                    defaultChecked={values.deadline_mode === mode}
+                    className="peer sr-only"
+                  />
+                  <span className={cn(chipClass, "border-control")}>
+                    <Icon name="check" strokeWidth={2.4} className="text-[15px]" />
+                    {label}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <span className={cn(helpClass, "group-has-[#deadline-custom:checked]/deadline:hidden")}>
+              Students can register until the start time.
             </span>
-            <Input
-              name="registration_deadline"
-              type="datetime-local"
-              defaultValue={values.registration_deadline}
-              {...invalid("registration_deadline")}
-            />
-            <FieldError
-              id="registration_deadline-error"
-              message={fieldErrors.registration_deadline}
-            />
-          </label>
+            <label
+              className={cn(
+                fieldStackClass,
+                "mt-3 hidden sm:max-w-xs group-has-[#deadline-custom:checked]/deadline:flex",
+              )}
+            >
+              <span className={cn(labelClass, "font-medium")}>
+                Closes at<span className={labelHintClass}> · IST</span>
+              </span>
+              <Input
+                name="registration_deadline"
+                type="datetime-local"
+                className="w-full min-w-0"
+                defaultValue={values.registration_deadline}
+                {...invalid("registration_deadline")}
+              />
+              <FieldError
+                id="registration_deadline-error"
+                message={fieldErrors.registration_deadline}
+              />
+              <span className={helpClass}>
+                Any time up to the end of the event. A time after the start keeps registration
+                open while it runs.
+              </span>
+            </label>
+          </fieldset>
         </div>
-        <p className={cn(helpClass, "mt-2")}>
-          Leave the deadline blank to close registration when the event starts. A later deadline
-          keeps it open while the event runs, up to the end time (or {EVENT_END_FALLBACK_HOURS}{" "}
-          hours after the start if the end time is the same as the start).
-        </p>
       </section>
 
-      <SubmitButton
-        variant="primary"
-        className="w-full sm:w-auto sm:self-start"
-        pendingLabel={pendingLabel}
-      >
-        {submitLabel}
-      </SubmitButton>
+      {/* Primary button last in the DOM but shown first on phones: the
+          browser's Enter-to-submit uses the first submit button, so Enter
+          in a field saves a draft rather than publishing. */}
+      <div className="flex flex-col gap-3 border-t border-line pt-6">
+        {status === null || status === "draft" ? (
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <SubmitButton name="intent" value="draft" variant="ghost" pendingLabel="Saving…">
+              Save draft
+            </SubmitButton>
+            <SubmitButton name="intent" value="publish" variant="primary" pendingLabel="Publishing…">
+              Publish
+            </SubmitButton>
+          </div>
+        ) : status === "published" ? (
+          <>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                aria-expanded={confirmingDraft}
+                onClick={() => setConfirmingDraft(true)}
+              >
+                Move to draft
+              </Button>
+              <SubmitButton name="intent" value="save" variant="primary" pendingLabel="Saving…">
+                Save changes
+              </SubmitButton>
+            </div>
+            {confirmingDraft && (
+              <div className="flex flex-col gap-3 rounded-xl bg-soft px-3.5 py-3 sm:flex-row sm:items-center">
+                <p className="mr-auto text-sm text-ink">
+                  <span className="font-semibold">Move back to draft?</span> Students won&rsquo;t
+                  see it or be able to register, and tickets already issued go on hold until you
+                  publish again.
+                </p>
+                <div className="flex gap-2">
+                  <Button type="button" variant="ghost" onClick={() => setConfirmingDraft(false)}>
+                    Keep published
+                  </Button>
+                  <SubmitButton name="intent" value="draft" variant="primary" pendingLabel="Saving…">
+                    Save as draft
+                  </SubmitButton>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex sm:justify-end">
+            <SubmitButton
+              name="intent"
+              value="save"
+              variant="primary"
+              className="w-full sm:w-auto"
+              pendingLabel="Saving…"
+            >
+              Save changes
+            </SubmitButton>
+          </div>
+        )}
+      </div>
     </form>
   );
 }

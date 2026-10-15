@@ -1,17 +1,16 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ActionForm } from "@/components/ui/ActionForm";
 import { ButtonLink } from "@/components/ui/Button";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { NotManager } from "@/components/layout/ManageNotice";
 import { Icon } from "@/components/ui/Icon";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SubmitButton } from "@/components/ui/SubmitButton";
 import { EventForm } from "@/components/events/EventForm";
 import { EventStatusBadge } from "@/components/events/EventStatusBadge";
 import { CancelEventButton } from "@/components/events/CancelEventButton";
+import { eventTimingValues, recentVenues } from "@/lib/event-form";
 import { toIstDateTimeLocal } from "@/lib/ist";
-import { updateEvent, publishEvent, cancelEvent } from "../actions";
+import { updateEvent, cancelEvent } from "../actions";
 
 export default async function EditEventPage({
   params,
@@ -49,19 +48,29 @@ export default async function EditEventPage({
     return <NotManager />;
   }
 
-  const { data: event } = await supabase
-    .from("events")
-    .select(
-      "id, club_id, title, slug, category, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status",
-    )
-    .eq("id", eventId)
-    .eq("club_id", clubId)
-    .maybeSingle();
+  const [{ data: event }, { data: venueRows }] = await Promise.all([
+    supabase
+      .from("events")
+      .select(
+        "id, club_id, title, slug, category, description, banner_url, venue, start_at, end_at, registration_deadline, capacity, status",
+      )
+      .eq("id", eventId)
+      .eq("club_id", clubId)
+      .maybeSingle(),
+    // Venue shortcuts from the club's other events, under the existing
+    // events SELECT policy.
+    supabase
+      .from("events")
+      .select("venue")
+      .eq("club_id", clubId)
+      .neq("id", eventId)
+      .order("start_at", { ascending: false })
+      .limit(30),
+  ]);
 
   if (!event) notFound();
 
   const updateWithIds = updateEvent.bind(null, clubId, eventId);
-  const publish = publishEvent.bind(null, clubId, eventId);
   const cancel = cancelEvent.bind(null, clubId, eventId);
 
   return (
@@ -77,15 +86,10 @@ export default async function EditEventPage({
       <EventStatusBadge status={event.status} />
       <PageHeader size="md" className="mt-2" title={event.title} />
 
+      {/* Publishing is the form's own "Publish" button, which saves any edits
+          in the same step. */}
       {(event.status === "draft" || event.status === "published") && (
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          {event.status === "draft" && (
-            <ActionForm action={publish}>
-              <SubmitButton variant="primary" pendingLabel="Publishing…">
-                Publish
-              </SubmitButton>
-            </ActionForm>
-          )}
           {event.status === "published" && (
             <ButtonLink href={`/admin/clubs/${clubId}/events/${eventId}/scan`}>
               <Icon name="scan" />
@@ -115,16 +119,16 @@ export default async function EditEventPage({
           category: event.category,
           description: event.description ?? "",
           venue: event.venue ?? "",
-          start_at: toIstDateTimeLocal(event.start_at),
-          end_at: toIstDateTimeLocal(event.end_at),
+          ...eventTimingValues(event.start_at, event.end_at),
+          deadline_mode: event.registration_deadline ? "custom" : "start",
           registration_deadline: event.registration_deadline
             ? toIstDateTimeLocal(event.registration_deadline)
             : "",
           capacity: event.capacity == null ? "" : String(event.capacity),
           banner_url: event.banner_url ?? "",
         }}
-        submitLabel="Save changes"
-        pendingLabel="Saving…"
+        status={event.status}
+        recentVenues={recentVenues(venueRows ?? [])}
       />
     </main>
   );
