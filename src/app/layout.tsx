@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { TabBar } from "@/components/layout/TabBar";
+import { SITE_DESCRIPTION } from "@/lib/site-meta";
 import "./globals.css";
 
 const geist = Geist({
@@ -26,8 +27,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Sabha — DTU events & societies",
-  description:
-    "Discover DTU society events, register in a tap, and get a QR ticket scanned at the gate. Built for Delhi Technological University.",
+  description: SITE_DESCRIPTION,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

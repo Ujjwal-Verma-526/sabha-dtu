@@ -9,7 +9,10 @@ export function Footer() {
           <Logo size={22} />
           <span>Built for Delhi Technological University</span>
         </span>
-        <nav aria-label="Legal" className="flex gap-5">
+        <nav aria-label="Footer" className="flex gap-5">
+          <Link href="/about" className="hover:text-ink">
+            About
+          </Link>
           <Link href="/terms" className="hover:text-ink">
             Terms
           </Link>

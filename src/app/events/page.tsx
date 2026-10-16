@@ -146,7 +146,7 @@ export default async function EventsPage({
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 md:px-8 md:pt-11">
       <div className="md:grid md:grid-cols-[minmax(0,1fr)_300px] md:gap-14">
         <div className="min-w-0">
-          <p className="text-[12.5px] font-bold tracking-[0.08em] text-live-text uppercase">
+          <p className="text-[12.5px] font-bold tracking-[0.08em] text-ink-soft uppercase">
             {formatIstShortDate(now)} · what&apos;s on
           </p>
           <h1 className="font-display-tight mt-1.5 text-[42px] leading-[0.95] text-ink md:text-[68px]">
