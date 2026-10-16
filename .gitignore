@@ -49,3 +49,6 @@ supabase/.temp/
 
 # local UI design mockups (phase 1 review, not shipped)
 /design-previews/
+
+# Claude Code per-user settings
+.claude/settings.local.json
