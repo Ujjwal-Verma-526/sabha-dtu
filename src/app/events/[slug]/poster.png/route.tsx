@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { categoryKey, categoryLabel, categoryPosterColors } from "@/lib/categories";
 import { eventWhenWhere } from "@/lib/event-share";
@@ -5,12 +7,22 @@ import { getPublicEventForShare } from "@/lib/public-event";
 
 // The link-preview image for an event without a banner (the event page's Open
 // Graph / Twitter image points here; an event with a banner uses the banner).
-// 1200x630, the auto-poster's category colour, in the default font Next ships
-// with ImageResponse (Geist, regular weight only).
+// 1200x630, the auto-poster's category colour. Fonts are committed under
+// src/assets/fonts: Geist regular for the text (the face ImageResponse ships;
+// passing any font replaces it, so it is loaded here too), and Mukta and
+// Bricolage Grotesque extra-bold for the Sabha mark (src/components/ui/Logo.tsx;
+// change both together). Mukta is what draws the Devanagari "सभा".
 
 const WIDTH = 1200;
 const HEIGHT = 630;
 const SAFFRON = "#ff9933";
+
+const FONT_DIR = join(process.cwd(), "src/assets/fonts");
+const fontData = Promise.all([
+  readFile(join(FONT_DIR, "Geist-Regular.ttf")),
+  readFile(join(FONT_DIR, "Mukta-ExtraBold-devanagari.woff")),
+  readFile(join(FONT_DIR, "BricolageGrotesque-ExtraBold-latin.woff")),
+]);
 
 const DOT_PITCH = 30;
 const DOT_SIZE = 6;
@@ -60,6 +72,8 @@ export async function GET(
   const club = drawable(event.clubName ?? "") || "A DTU society";
   const title = clamp(drawable(event.title) || "Event on Sabha", 90);
   const whenWhere = clamp(drawable(eventWhenWhere(event)), 90);
+
+  const [geist, mukta, bricolage] = await fontData;
 
   const image = new ImageResponse(
     (
@@ -116,18 +130,36 @@ export async function GET(
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", fontSize: 40 }}>
+            {/* the mark at 60px: सभा, the saffron danda, sabha (em values as in Logo.tsx) */}
+            <div style={{ display: "flex", alignItems: "flex-end", fontSize: 60, lineHeight: 1 }}>
+              <div style={{ display: "flex", fontFamily: "Mukta", fontWeight: 800, lineHeight: 1 }}>
+                सभा
+              </div>
               <div
                 style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 8,
+                  width: 6,
+                  height: 31,
+                  borderRadius: 3,
+                  marginLeft: 5,
+                  marginBottom: 12,
                   // saffron vanishes on the marigold poster
                   backgroundColor: category === "entrepreneurship" ? fg : SAFFRON,
-                  marginRight: 14,
                 }}
               />
-              Sabha
+              <div
+                style={{
+                  display: "flex",
+                  fontFamily: "Bricolage Grotesque",
+                  fontWeight: 800,
+                  fontSize: 34,
+                  letterSpacing: -1.5,
+                  lineHeight: 1,
+                  marginLeft: 21,
+                  marginBottom: 12,
+                }}
+              >
+                sabha
+              </div>
             </div>
             <div
               style={{
@@ -165,7 +197,15 @@ export async function GET(
         </div>
       </div>
     ),
-    { width: WIDTH, height: HEIGHT },
+    {
+      width: WIDTH,
+      height: HEIGHT,
+      fonts: [
+        { name: "Geist", data: geist, weight: 400, style: "normal" },
+        { name: "Mukta", data: mukta, weight: 800, style: "normal" },
+        { name: "Bricolage Grotesque", data: bricolage, weight: 800, style: "normal" },
+      ],
+    },
   );
 
   // Crawlers ask repeatedly; a changed title or time shows up within the hour.
