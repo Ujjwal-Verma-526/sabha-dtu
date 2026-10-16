@@ -43,21 +43,25 @@ export function DesktopNav() {
   );
 }
 
-/** Round profile button at the right of the desktop header. */
-export function ProfileLink() {
+/**
+ * Round profile button at the right of the desktop header, showing the
+ * viewer's photo or initials (`children`, an Avatar rendered on the server).
+ */
+export function ProfileLink({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const active = isActive(pathname, "/profile");
   return (
     <Link
       href="/profile"
       aria-label="Profile"
+      title="Profile"
       aria-current={active ? "page" : undefined}
       className={cn(
-        "hidden h-9 w-9 items-center justify-center rounded-full border text-lg transition-colors md:flex",
-        active ? "border-ink bg-soft text-ink" : "border-line text-ink-soft hover:text-ink",
+        "hidden h-9 w-9 items-center justify-center rounded-full border p-px transition-colors md:flex [&>*]:h-full [&>*]:w-full",
+        active ? "border-ink" : "border-line hover:border-control",
       )}
     >
-      <Icon name="user" />
+      {children}
     </Link>
   );
 }

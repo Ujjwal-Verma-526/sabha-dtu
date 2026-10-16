@@ -6,7 +6,8 @@ import { Icon } from "@/components/ui/Icon";
 import { PageHeader, sectionHeadingClass } from "@/components/ui/PageHeader";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { ProfileForm } from "@/components/profile/ProfileForm";
-import { updateProfile, signOut } from "./actions";
+import { ProfilePhoto } from "@/components/profile/ProfilePhoto";
+import { setProfilePhoto, updateProfile, signOut } from "./actions";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -72,6 +73,18 @@ export default async function ProfilePage() {
         <Icon name="arrowRight" className="text-xl text-ink-soft" />
       </Link>
 
+      <section aria-labelledby="photo-heading" className="mt-10">
+        <h2 id="photo-heading" className={sectionHeadingClass}>
+          Photo
+        </h2>
+        <ProfilePhoto
+          userId={user.id}
+          name={profile.name}
+          initialAvatarUrl={profile.avatar_url}
+          save={setProfilePhoto}
+        />
+      </section>
+
       <section aria-labelledby="details-heading" className="mt-10">
         <h2 id="details-heading" className={sectionHeadingClass}>
           Your details
@@ -83,7 +96,6 @@ export default async function ProfilePage() {
             roll_number: profile.roll_number ?? "",
             branch: profile.branch ?? "",
             batch_year: profile.batch_year?.toString() ?? "",
-            avatar_url: profile.avatar_url ?? "",
           }}
         />
       </section>

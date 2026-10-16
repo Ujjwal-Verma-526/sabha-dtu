@@ -1,13 +1,15 @@
 /**
- * Client-side pieces shared by the banner and logo uploaders. Both upload to
- * the public `event-banners` bucket under `{club_id}/…`, which the bucket's
- * policies scope to that club's managers (and super admins).
+ * Client-side pieces shared by the banner, logo and profile photo uploaders.
+ * Banners and logos go to the public `event-banners` bucket under
+ * `{club_id}/…`, which the bucket's policies scope to that club's managers
+ * (and super admins). Profile photos go to the public `avatars` bucket under
+ * `{user_id}/…`, writable only by that user (src/lib/avatar.ts).
  */
 
-/** Must match the bucket's file_size_limit. */
+/** Must match both buckets' file_size_limit. */
 export const MAX_SOURCE_BYTES = 5 * 1024 * 1024;
 
-/** Must match the bucket's allowed_mime_types. */
+/** Must match both buckets' allowed_mime_types. */
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export const IMAGE_INPUT_ACCEPT = ALLOWED_IMAGE_TYPES.join(",");

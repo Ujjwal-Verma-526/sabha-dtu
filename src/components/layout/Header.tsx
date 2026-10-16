@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Avatar } from "@/components/ui/Avatar";
 import { ButtonLink } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { DropdownMenu } from "@/components/layout/DropdownMenu";
@@ -17,12 +18,20 @@ export async function Header() {
   const supabase = await createClient();
   const { data: claimsData } = await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub;
-  const isSignedIn = Boolean(userId);
   // Display-only: decides which links to show. The admin pages themselves
-  // re-check access on the server.
-  const roles = userId
-    ? await getViewerRoles(supabase, userId)
-    : { isSuperAdmin: false, managedClubs: [] };
+  // re-check access on the server. The name and photo are the viewer's own
+  // row, under users' own-row RLS.
+  const [roles, profile] = userId
+    ? await Promise.all([
+        getViewerRoles(supabase, userId),
+        supabase
+          .from("users")
+          .select("name, avatar_url")
+          .eq("id", userId)
+          .maybeSingle()
+          .then(({ data }) => data),
+      ])
+    : [{ isSuperAdmin: false, managedClubs: [] }, null];
   const [singleClub, ...otherClubs] = roles.managedClubs;
 
   return (
@@ -63,8 +72,15 @@ export async function Header() {
             />
           ) : null}
 
-          {isSignedIn ? (
-            <ProfileLink />
+          {userId ? (
+            <ProfileLink>
+              <Avatar
+                name={profile?.name}
+                avatarUrl={profile?.avatar_url}
+                userId={userId}
+                className="text-[13px]"
+              />
+            </ProfileLink>
           ) : (
             // Phones get "Sign in" in the tab bar instead.
             <span className="hidden md:block">

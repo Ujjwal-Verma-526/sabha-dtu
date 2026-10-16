@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { formatIstDateTime, formatIstShortDate, formatIstTime, isSameIstDay } from "@/lib/ist";
 import { cn } from "@/lib/utils";
@@ -51,12 +52,16 @@ export function TicketStub({
   state,
   qrSvg,
   attendeeName,
+  attendeeAvatarUrl,
+  attendeeUserId,
 }: {
   ticket: TicketStubData;
   state: Extract<TicketState, "active" | "on_hold">;
   // Server-rendered SVG markup for the token; only passed for active tickets.
   qrSvg: string | null;
   attendeeName: string | null;
+  attendeeAvatarUrl: string | null;
+  attendeeUserId: string;
 }) {
   return (
     // The outline sits outside the white card, on the page, so it takes the
@@ -117,8 +122,14 @@ export function TicketStub({
                 dangerouslySetInnerHTML={{ __html: qrSvg }}
               />
               {attendeeName && (
-                <p className="mt-2 text-center text-base font-semibold break-words text-ink">
-                  {attendeeName}
+                <p className="mt-2 flex max-w-full items-center justify-center gap-2 text-base font-semibold text-ink">
+                  <Avatar
+                    name={attendeeName}
+                    avatarUrl={attendeeAvatarUrl}
+                    userId={attendeeUserId}
+                    className="h-8 w-8 text-xs"
+                  />
+                  <span className="min-w-0 break-words">{attendeeName}</span>
                 </p>
               )}
               <p className="mt-0.5 font-mono text-[13px] tracking-[0.04em] text-ink-soft">
