@@ -4,6 +4,7 @@ import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { NotManager } from "@/components/layout/ManageNotice";
 import { ClubLogo } from "@/components/clubs/ClubLogo";
 import { VerifiedBadge } from "@/components/clubs/VerifiedBadge";
+import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { PageHeader, sectionHeadingClass } from "@/components/ui/PageHeader";
 import { ButtonLink } from "@/components/ui/Button";
@@ -145,11 +146,19 @@ export default async function AdminClubPage({
                   key={m.membership_id}
                   className="flex flex-col gap-3 border-b border-line px-4 py-3.5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="min-w-0">
-                    <p className="font-semibold break-words text-ink">{m.name}</p>
-                    <p className="text-[13px] text-ink-soft">
-                      Requested {formatIstDate(m.joined_at)}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar
+                      name={m.name}
+                      avatarUrl={m.avatar_url}
+                      userId={m.user_id}
+                      className="h-10 w-10 text-sm"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold break-words text-ink">{m.name}</p>
+                      <p className="text-[13px] text-ink-soft">
+                        Requested {formatIstDate(m.joined_at)}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <ActionForm action={reject}>

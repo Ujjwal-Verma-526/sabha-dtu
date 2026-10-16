@@ -13,17 +13,19 @@ export const BATCH_YEAR_MIN = 2000;
 export const BATCH_YEAR_MAX = 2100;
 
 /**
- * Mirrors users_name_length, users_roll_number_length, users_branch_length and
- * users_avatar_url_length in
- * supabase/migrations/20260901000001_profile_field_checks.sql. The database
+ * Mirrors users_name_length, users_roll_number_length and users_branch_length
+ * in supabase/migrations/20260901000001_profile_field_checks.sql. The database
  * counts characters; .length counts UTF-16 units, which is never fewer, so
  * anything that passes here passes there.
+ *
+ * avatar_url isn't part of this form: the photo has its own uploader and save
+ * action (src/lib/avatar.ts), which only ever stores a URL in our own
+ * storage, well inside users_avatar_url_length and users_avatar_url_web.
  */
 export const PROFILE_MAX_LENGTH = {
   name: 100,
   roll_number: 30,
   branch: 100,
-  avatar_url: 500,
 } as const;
 
 export type ProfileFormValues = {
@@ -31,7 +33,6 @@ export type ProfileFormValues = {
   roll_number: string;
   branch: string;
   batch_year: string;
-  avatar_url: string;
 };
 
 export type ProfileFieldName = keyof ProfileFormValues;
@@ -51,7 +52,6 @@ export type ProfileUpdate = {
   roll_number: string | null;
   branch: string | null;
   batch_year: number | null;
-  avatar_url: string | null;
 };
 
 function readText(formData: FormData, key: ProfileFieldName): string {
@@ -65,32 +65,7 @@ export function readProfileValues(formData: FormData): ProfileFormValues {
     roll_number: readText(formData, "roll_number"),
     branch: readText(formData, "branch"),
     batch_year: readText(formData, "batch_year"),
-    avatar_url: readText(formData, "avatar_url"),
   };
-}
-
-/**
- * Mirrors users_avatar_url_web (`avatar_url ~* '^https?://'`) in
- * supabase/migrations/20260901000001_profile_field_checks.sql.
- */
-const WEB_URL_PREFIX = /^https?:\/\//i;
-
-/**
- * Only web links: a stored `javascript:` or `data:` URL is an XSS vector the
- * day it is rendered. The prefix test matches the database exactly; the URL
- * parser alone also accepts forms the database refuses (`https:example.com`,
- * a tab inside the scheme), which would surface as a generic error.
- */
-function isWebUrl(value: string): boolean {
-  if (!WEB_URL_PREFIX.test(value)) {
-    return false;
-  }
-  try {
-    const { protocol } = new URL(value);
-    return protocol === "https:" || protocol === "http:";
-  } catch {
-    return false;
-  }
 }
 
 export type ProfileValidation =
@@ -104,7 +79,7 @@ export function validateProfile(values: ProfileFormValues): ProfileValidation {
   if (!values.name) {
     fieldErrors.name = "Name is required.";
   }
-  for (const field of ["name", "roll_number", "branch", "avatar_url"] as const) {
+  for (const field of ["name", "roll_number", "branch"] as const) {
     if (values[field].length > PROFILE_MAX_LENGTH[field]) {
       fieldErrors[field] = `Keep this under ${PROFILE_MAX_LENGTH[field]} characters.`;
     }
@@ -122,10 +97,6 @@ export function validateProfile(values: ProfileFormValues): ProfileValidation {
     }
   }
 
-  if (values.avatar_url && !fieldErrors.avatar_url && !isWebUrl(values.avatar_url)) {
-    fieldErrors.avatar_url = "Enter a web link starting with https://";
-  }
-
   if (Object.keys(fieldErrors).length > 0) {
     return { ok: false, fieldErrors };
   }
@@ -137,7 +108,6 @@ export function validateProfile(values: ProfileFormValues): ProfileValidation {
       roll_number: values.roll_number || null,
       branch: values.branch || null,
       batch_year: batchYear,
-      avatar_url: values.avatar_url || null,
     },
   };
 }

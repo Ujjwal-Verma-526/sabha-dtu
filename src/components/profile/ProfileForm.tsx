@@ -6,7 +6,6 @@ import {
   FieldError,
   FormNotice,
   fieldStackClass,
-  helpClass,
   labelClass,
   labelHintClass,
 } from "@/components/ui/Field";
@@ -95,18 +94,6 @@ export function ProfileForm({ action, initialValues }: ProfileFormProps) {
           {...invalid("branch")}
         />
         <FieldError id="branch-error" message={fieldErrors.branch} />
-      </label>
-
-      <label className={fieldStackClass}>
-        <span className={labelClass}>Avatar URL{optional}</span>
-        <Input
-          name="avatar_url"
-          maxLength={PROFILE_MAX_LENGTH.avatar_url}
-          defaultValue={values.avatar_url}
-          {...invalid("avatar_url")}
-        />
-        <span className={helpClass}>A link to a picture of you, starting with https://.</span>
-        <FieldError id="avatar_url-error" message={fieldErrors.avatar_url} />
       </label>
 
       <SubmitButton variant="primary" className="w-full sm:w-auto sm:self-start" pendingLabel="Saving…">

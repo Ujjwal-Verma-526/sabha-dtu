@@ -28,10 +28,11 @@ export default async function TicketsPage() {
   // Event details come from get_my_registrations() (security definer,
   // scoped to auth.uid()) because events RLS hides cancelled/completed
   // events from students. It never returns tokens. The name printed on the
-  // tickets is the viewer's own users row, under its own-row RLS.
+  // tickets (and the photo beside it) is the viewer's own users row, under its
+  // own-row RLS.
   const [registrationsResult, profileResult] = await Promise.all([
     supabase.rpc("get_my_registrations"),
-    supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
+    supabase.from("users").select("name, avatar_url").eq("id", user.id).maybeSingle(),
   ]);
   const { data: registrations, error: registrationsError } = registrationsResult;
 
@@ -43,6 +44,7 @@ export default async function TicketsPage() {
     console.error("Could not load the ticket holder's name", profileResult.error.message);
   }
   const attendeeName = profileResult.data?.name ?? null;
+  const attendeeAvatarUrl = profileResult.data?.avatar_url ?? null;
 
   const now = new Date();
   const tickets = registrations.map((registration) => ({
@@ -129,6 +131,8 @@ export default async function TicketsPage() {
                     qrSvg={qrByRegistration.get(registration.registration_id) ?? null}
                     ticket={toStubData(registration)}
                     attendeeName={attendeeName}
+                    attendeeAvatarUrl={attendeeAvatarUrl}
+                    attendeeUserId={user.id}
                   />
                 ))}
               </div>
