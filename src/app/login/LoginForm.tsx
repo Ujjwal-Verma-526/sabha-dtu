@@ -12,6 +12,7 @@ import { FormNotice, fieldStackClass, labelClass } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { GoogleSignIn } from "./GoogleSignIn";
+import { Logo } from "@/components/ui/Logo";
 
 type LoginFormProps = {
   /** Already-validated same-site path to return to after sign-in, or null. */
@@ -83,6 +84,7 @@ export function LoginForm({ next, initialError }: LoginFormProps) {
   return (
     <main className="flex flex-1 items-start justify-center px-4 pt-10 pb-16 md:items-center md:py-20">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 shadow-card md:p-7">
+        <Logo variant="full" size={40} className="mb-5" />
         <h1 className="text-[28px] leading-[1.15] font-semibold tracking-[-0.035em] text-ink">
           Sign in
         </h1>

@@ -11,6 +11,7 @@ import { isHappeningNow } from "@/lib/event-timing";
 import { formatIstShortDate, formatIstTime, istWeekEnd } from "@/lib/ist";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/ui/Logo";
 
 /** Below this many events this week, the big numbers would look thin; lead with the posters instead. */
 const MIN_EVENTS_FOR_NUMBERS = 3;
@@ -91,6 +92,7 @@ export default async function Home() {
       <section className="hero-dots relative overflow-hidden border-b border-line">
         <PinnedPosters />
         <div className="relative mx-auto max-w-6xl px-4 pt-8 pb-12 md:px-8 md:pt-16 md:pb-20">
+          <Logo variant="full" size={64} className="mb-6 md:mb-8" />
           <p className="text-[12.5px] font-bold tracking-[0.1em] text-marigold-text uppercase">
             {formatIstShortDate(now)} · This week at DTU
           </p>

@@ -6,6 +6,7 @@ import { DropdownMenu } from "@/components/layout/DropdownMenu";
 import { BackLink, DesktopNav, ProfileLink } from "@/components/layout/NavLinks";
 import { getViewerRoles } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { Logo } from "@/components/ui/Logo";
 
 const manageLinkClass =
   "inline-flex h-9 items-center gap-1.5 rounded-lg bg-soft px-3 text-sm font-medium text-ink transition-colors hover:bg-line";
@@ -39,12 +40,8 @@ export async function Header() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 md:h-16 md:px-8">
         <div className="flex items-center gap-1">
           <BackLink />
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-[19px] font-semibold tracking-[-0.03em] text-ink"
-          >
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-saffron" />
-            Sabha
+          <Link href="/" className="flex items-center">
+            <Logo />
           </Link>
         </div>
 
